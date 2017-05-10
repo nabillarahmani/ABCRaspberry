@@ -135,7 +135,7 @@ def create_app():
 			APDU_CARD = [0x00, 0xB0, 0x00, 0x00, 0x02]
 			data, sw1, sw2 = connection.transmit(APDU_CARD)			
 
-			# GET CARD TYPE (XIRCA / DAM)
+			# GET CARD TYPE (XIRCA)
 			card_id = data[1]
 
 
@@ -146,14 +146,13 @@ def create_app():
 			#Get field map + length map
 			APDU_GET_FIELD 	= [0x00, 0xB0, 0x00, 0x00, 0x33]
 			data, sw1, sw2 	= connection.transmit(APDU_GET_FIELD)
-			flag_empty 		= False	
+			flag_empty 		= True	
 
 			# Check for each element whether it is filled yet or not
 			for element in data:
-				converted_dec = hex(element)
-				# IF there is one single element which not FF, then it is filled
-				if converted_dec != '0xFF':
-					flag_empty = True
+				# IF there is one single element which not 255, then it is filled
+				if element != 255:
+					flag_empty = False
 
 			if flag_empty == True:
 				#sdcard disconnect
@@ -164,11 +163,12 @@ def create_app():
 			respond_field_map 	= get_array_hex(data)
 			field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
 
-			# Get the total length of map
+			# Get the total length of map, after the first 3 bytes, it will define the length of each data
 			total_length_map= 0
-			length_map 		= data[6:]
+			length_map 		= data[3:]
 			
 			for length in length_map:
+
 				total_length_map += length
 
 			# SELECT EF FOR FIRST DATA 
@@ -180,10 +180,123 @@ def create_app():
 				#sdcard disconnect
 				return render_template('failed_readcard.html')
 
-			iteration = total_length_map / 51
+			iteration 		= total_length_map / 240
+			APDU_GET_DATA_1	= [0x00, 0xB0, 0x00, 0x00]
+			respond_data_1	= []
 
+			if total_length_map < 240:
+				APDU_GET_DATA_1.append(total_length_map)
+				respond, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)	
+			else:
+				while iteration >= 0:
+					if (total_length_map - 240) > 0 :
+						# By default take 240 bytes from the card
+						APDU_GET_DATA_1.append(240)
+						data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
+						if sw1 == None and sw2 == None:
+							#sdcard disconnect
+							return render_template('failed_readcard.html')
+						respond.extend(data)
+						APDU_GET_DATA_1.pop()
+						iteration -= 1
+					else:
+						# If smaller than the threshold then, take the remainder
+						remainder = total_length_map - 240
+						APDU_GET_DATA_1.append(remainder)
+						data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
+						if sw1 == None and sw2 == None:
+							#sdcard disconnect
+							return render_template('failed_readcard.html')
+						respond.extend(data)
+						APDU_GET_DATA_1.pop()
+						iteration -= 1
 
+			# initialize the length of variable needed
+			length_identification_number_start 	= 0
+			length_identification_number_end 	= 0
+			length_full_name_start 				= 0
+			length_full_name_end 				= 0
+			length_icao_2_start					= 0
+			length_icao_2_end					= 0
+			length_photo_start					= 0
+			length_photo_end					= 0
 
+			# Iterate the length map to get the start and end of each data
+
+			i = 0
+			start_offset = 0
+
+			# Getting the start and end index of length
+			for data in length_map:
+				start_offset += data
+				if i >= 4 and i <= 5:
+					if i == 4:
+						length_identification_number_start = start_offset
+						length_identification_number_end = start_offset
+					length_identification_number_end += data
+				
+				if i >= 6 and i <= 7:
+					if i == 6:
+						length_full_name_start = start_offset
+						length_full_name_end = start_offset
+					length_full_name_end += data
+
+				if i>= 20 and i <= 21:
+					if i == 20:
+						length_icao_2_start = start_offset
+						length_icao_2_end = start_offset
+					length_icao_2_end += data
+
+				if i >= 22 and i <= 23:
+					if i == 22:
+						length_photo_start = start_offset
+						length_photo_end = start_offset
+					length_photo_end += data
+				i += 1
+
+			# Initialize the dictionnary
+			respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : '', 'photo' : ''}
+			
+			# check if each mapped data is exist
+			# Get data for identification number
+			if field_map[2] == "1":
+				for data in respond_data_1[length_identification_number_start:length_identification_number_end]:
+					respond_mapped['identification_number'] += str(chr(data))
+			# Get data for fullname
+			if field_map[3] == "1":
+				for data in respond_data_1[length_full_name_start:length_full_name_end]:
+					respond_mapped['full_name'] += str(chr(data))
+
+			# Get data for data ICAO 2
+			if field_map[10] == "1":
+				APDU_SELECT_ICAO_2 = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x03]
+				data, sw1, sw2 = connection.transmit(APDU_SELECT_ICAO_2)
+				
+				APDU_GET_ICAO_2 = [0x00, 0xB0, 0x00, 0x00]
+				APDU_GET_ICAO_2.extend(length_icao_2_end - length_icao_2_start)
+
+				data_icao, sw1, sw2 = connection.transmit(APDU_GET_ICAO_2)
+
+				for data in data_icao:
+					respond_mapped['icao_2'] += str(chr(data))
+
+			photo = ""
+			# Get data for data photo
+			if field_map[11] == "1":
+				APDU_SELECT_PHOTO = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x04]
+				data, sw1, sw2 = connection.transmit(APDU_SELECT_PHOTO)
+				length_byte = length_photo_end - length_photo_start
+				APDU_GET_PHOTO = [0x00, 0xB0, 0x00, 0x00]
+				APDU_GET_PHOTO.append(length_byte)
+
+				data_photo, sw1, sw2 = connection.transmit(APDU_GET_PHOTO)
+
+				for data in data_photo:
+					# do base64 encode to get the photo
+					respond_mapped['photo'] += str(chr(data)
+
+				print(respond_mapped['photo'])
+			print(photo)
 
 		except:
 			return render_template('failed_readcard_content.html')
