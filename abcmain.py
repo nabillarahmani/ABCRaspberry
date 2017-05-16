@@ -4,13 +4,19 @@ from flask import render_template
 from flask import request
 from flask import url_for
 from flask_dotenv import DotEnv
-from flask_sqlalchemy import SQLAlchemy
 from smartcard.System import readers
-from __future__ import print_function
+from beaker.middleware import SessionMiddleware
 from smartcard.Exceptions import NoCardException
 from smartcard.System import readers
 from smartcard.util import toHexString
+from binascii import unhexlify, b2a_base64
 
+
+session_opts = {
+    'session.type': 'ext:memcached',
+    'session.url': '127.0.0.1:11211',
+    'session.data_dir': './cache',
+}
 
 def create_app():
 	env = DotEnv()
@@ -21,12 +27,29 @@ def create_app():
 		'TESTING': bool
 	})
 
+
 	@app.route("/")
 	def index():
 		"""
 			Render the view of index page.
 		"""
 		return render_template('index.html', title='', current_page='ABC Gate Home')
+
+
+	@app.errorhandler(404)
+	def page_not_found_error(err):
+		"""
+		Render the view of error 404 page
+		"""
+		return render_template('404.html', title='Page not found', current_page='404')
+
+
+	@app.errorhandler(500)
+	def internal_server_error(err):
+		"""
+		Render the view of error 500 page
+		"""
+		return render_template('500.html', title='Server internal server error', current_page='500')
 
 
 	def get_hex_string(array_of_hex, start, end):
@@ -60,53 +83,21 @@ def create_app():
 		h_size = len(hex_string) * 4
 		string_binary_field = (bin(int(hex_string, 16))[2:] ).zfill(h_size)
 		return string_binary_field
-	
-
-	def verification_document(extract_fingerprint, extract_picture):
-		"""
-			This will match between the data on smart card and on the given fingerprint
-		"""
-		return True	
-
-
-	def verification_cekal(identification_number):
-		"""
-			This method will send a GET request into the API and retrieve cekal status
-		"""
-		return True
-
-
-	def retrieve_image():
-		"""
-		"""
-		pass
-
-
-	def send_image():
-		"""
-		"""
-		pass
-
-
-	def logging():
-		"""
-		"""
-		pass
 
 
 	# Implementation of readcard using highlevel implementation
 	@app.route("/readcard")
 	def readcard():
+		import base64
 		"""
 			
 		"""
 		try:
-			# get all the available readers
 			r = readers()
-			print("Available readers:", r)
+			# print("Available readers:", r)
 
 			reader = r[0]
-			print ("Using:", reader)
+			# print ("Using:", reader)
 
 			connection = reader.createConnection()
 			connection.connect()
@@ -115,13 +106,12 @@ def create_app():
 			SELECT = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00]
 
 			data, sw1, sw2 = connection.transmit(SELECT)
-			print(data)
-			print("Select Applet: %02X %02X" % (sw1, sw2))
+
 
 			if sw1  == None and sw2 == None:
 				# discard connection on card
-				#
-				return render_template('failed_detect_card.html')
+				# print("failed to render card")
+				pass
 
 			# Select DF
 			APDU_DF = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x10, 0x01]
@@ -133,11 +123,7 @@ def create_app():
 
 			# GET CARD TYPE
 			APDU_CARD = [0x00, 0xB0, 0x00, 0x00, 0x02]
-			data, sw1, sw2 = connection.transmit(APDU_CARD)			
-
-			# GET CARD TYPE (XIRCA)
-			card_id = data[1]
-
+			data, sw1, sw2 = connection.transmit(APDU_CARD)
 
 			# SELECT EF (FIELD MAP + LENGTH MAP)
 			APDU_FIELD 		= [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x00]
@@ -147,29 +133,38 @@ def create_app():
 			APDU_GET_FIELD 	= [0x00, 0xB0, 0x00, 0x00, 0x33]
 			data, sw1, sw2 	= connection.transmit(APDU_GET_FIELD)
 			flag_empty 		= True	
-
+			
 			# Check for each element whether it is filled yet or not
 			for element in data:
-				# IF there is one single element which not 255, then it is filled
-				if element != 255:
+				# IF there is one single element which not FF, then it is filled
+				if element != '255':
 					flag_empty = False
 
 			if flag_empty == True:
 				#sdcard disconnect
-				return render_template('failed_readcard.html')
+				# print("error")
+				pass
+
 			# get the hex representation of respond
 			# parse the first 3 bits from the respond to check the length
 			# Field map = 10101010100011 (in binary) contains 3 bytes of binary representation
 			respond_field_map 	= get_array_hex(data)
-			field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
+			# print(respond_field_map)
 
-			# Get the total length of map, after the first 3 bytes, it will define the length of each data
+			field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
+			print("field map:")
+			print(field_map)
+
+			# Get the total length of map
 			total_length_map= 0
 			length_map 		= data[3:]
-			
-			for length in length_map:
+			print("length map:")
+			print(length_map)
+			print(data)
+			for x in length_map:
+				total_length_map += x
 
-				total_length_map += length
+			# print(total_length_map)
 
 			# SELECT EF FOR FIRST DATA 
 			APDU_SELECT_DATA_1 = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x01]
@@ -178,7 +173,8 @@ def create_app():
 			# handle if content inside card is null
 			if sw1 == None and sw2 == None:
 				#sdcard disconnect
-				return render_template('failed_readcard.html')
+				pass
+				# print('error')
 
 			iteration 		= total_length_map / 240
 			APDU_GET_DATA_1	= [0x00, 0xB0, 0x00, 0x00]
@@ -186,30 +182,35 @@ def create_app():
 
 			if total_length_map < 240:
 				APDU_GET_DATA_1.append(total_length_map)
-				respond, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)	
+				respond_data_1, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)	
 			else:
 				while iteration >= 0:
 					if (total_length_map - 240) > 0 :
 						# By default take 240 bytes from the card
-						APDU_GET_DATA_1.append(240)
+						APDU_GET_DATA_1.append(hex(240))
 						data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
 						if sw1 == None and sw2 == None:
+							pass
 							#sdcard disconnect
-							return render_template('failed_readcard.html')
-						respond.extend(data)
+							# print('error')
+						respond_data_1.extend(data)
 						APDU_GET_DATA_1.pop()
 						iteration -= 1
 					else:
 						# If smaller than the threshold then, take the remainder
 						remainder = total_length_map - 240
-						APDU_GET_DATA_1.append(remainder)
+						APDU_GET_DATA_1.append(hex(remainder))
 						data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
 						if sw1 == None and sw2 == None:
+							pass
 							#sdcard disconnect
-							return render_template('failed_readcard.html')
-						respond.extend(data)
+							# print('error')
+						respond_data_1.extend(data)
 						APDU_GET_DATA_1.pop()
 						iteration -= 1
+
+			# print(respond_data_1)
+			# print(len(respond_data_1))
 
 			# initialize the length of variable needed
 			length_identification_number_start 	= 0
@@ -254,10 +255,13 @@ def create_app():
 					length_photo_end += data
 				i += 1
 
-			# Initialize the dictionnary
-			respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : '', 'photo' : ''}
-			
+			respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : ''}
+			# print(length_identification_number_start)
+			# print(length_identification_number_end)
+
 			# check if each mapped data is exist
+			# print(field_map)
+			# print(field_map[2] == "1")
 			# Get data for identification number
 			if field_map[2] == "1":
 				for data in respond_data_1[length_identification_number_start:length_identification_number_end]:
@@ -266,6 +270,8 @@ def create_app():
 			if field_map[3] == "1":
 				for data in respond_data_1[length_full_name_start:length_full_name_end]:
 					respond_mapped['full_name'] += str(chr(data))
+
+			# print(respond_mapped)
 
 			# Get data for data ICAO 2
 			if field_map[10] == "1":
@@ -290,16 +296,62 @@ def create_app():
 				APDU_GET_PHOTO.append(length_byte)
 
 				data_photo, sw1, sw2 = connection.transmit(APDU_GET_PHOTO)
-
+				# print(data_photo)
 				for data in data_photo:
-					# do base64 encode to get the photo
-					respond_mapped['photo'] += str(chr(data)
+					# do base64 encode to get the photo data
+					hex_string = hex(data)[2:].zfill(2)
+					print("real" + str(data))
+					print("hex data" + str(hex(data)))
+					print(hex_string)
+					photo += hex_string
+				# print("nyem")
+				string = base64.b64encode(unhexlify(photo))
+				print(string)
+				result = b2a_base64(unhexlify(photo))
+				print(result)
+				res = photo.decode("hex").encode("base64")
+				print(res)
+				convert = base64.b64decode(result)
+				t = open("nyem.png", "w+")
+				t.write(convert)
+				t.close()
 
-				print(respond_mapped['photo'])
-			print(photo)
+			return render_template('404.html')
+		except Exception as e:
+			return e
 
-		except:
-			return render_template('failed_readcard_content.html')
+
+	def verification_document(extract_fingerprint, extract_picture):
+		"""
+			This will match between the data on smart card and on the given fingerprint
+		"""
+		return True	
+
+
+	def verification_cekal(identification_number):
+		"""
+			This method will send a GET request into the API and retrieve cekal status
+		"""
+		return True
+
+
+	def retrieve_image():
+		"""
+		"""
+		pass
+
+
+	def send_image():
+		"""
+		"""
+		pass
+
+
+	def logging():
+		"""
+		"""
+		pass
+
 
 	@app.route("/readfingerprint")
 	def readfingerprint():
@@ -331,23 +383,10 @@ def create_app():
 		pass
 
 
-	@app.errorhandler(404)
-	def page_not_found_error(err):
-		"""
-		Render the view of error 404 page
-		"""
-		return render_template('404.html', title='Page not found', current_page='404')
-
-	@app.errorhandler(500)
-	def internal_server_error(err):
-		"""
-		Render the view of error 500 page
-		"""
-		return render_template('500.html', title='Server internal server error', current_page='500')
-
 	return app
 
 
 if __name__ == "__main__":
 	application = create_app()
+	application.wsgi_app = SessionMiddleware(application.wsgi_app, session_opts)
 	application.run(host=application.config['HOST'], port=int(application.config['PORT']))
