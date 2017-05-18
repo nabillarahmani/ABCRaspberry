@@ -1,30 +1,41 @@
-apscheduler==3.1.0
-bcrypt==2.0.0             # via flask-bcrypt
-blinker==1.4              # via flask-mail, flask-principal
-cffi==1.6.0               # via bcrypt
+appdirs==1.4.3
+APScheduler==3.1.0
+bcrypt==2.0.0
+Beaker==1.8.1
+blinker==1.4
+cffi==1.6.0
+Flask==0.10.1
 Flask-Bcrypt==0.7.1
 Flask-DotEnv==0.1.0
 Flask-HTTPAuth==3.1.2
-Flask-Login==0.3.2        # via flask-security
-Flask-Mail==0.9.1         # via flask-security
-Flask-MongoEngine==0.7.5
-Flask-Principal==0.4.0    # via flask-security
+Flask-Login==0.3.2
+Flask-Mail==0.9.1
+flask-mongoengine==0.7.5
+Flask-Principal==0.4.0
 Flask-Profile==0.2
 Flask-Security==1.7.5
-Flask-WTF==0.12           # via flask-mongoengine, flask-security
-Flask==0.10.1             # via flask-bcrypt, flask-dotenv, flask-httpauth, flask-login, flask-mail, flask-mongoengine, flask-principal, flask-profile, flask-security, flask-wtf
-funcsigs==1.0.2           # via apscheduler
-futures==3.0.5            # via apscheduler
-itsdangerous==0.24        # via flask, flask-security
-Jinja2==2.8               # via flask
-MarkupSafe==0.23          # via jinja2
-mongoengine==0.10.6       # via flask-mongoengine
-passlib==1.6.5            # via flask-security
-pycparser==2.14           # via cffi
-pymongo==3.2.2            # via mongoengine
+Flask-Session==0.3.1
+Flask-WTF==0.12
+funcsigs==1.0.2
+futures==3.0.5
+itsdangerous==0.24
+Jinja2==2.8
+MarkupSafe==0.23
+mongoengine==0.10.6
+packaging==16.8
+passlib==1.6.5
+pluggy==0.4.0
+py==1.4.33
+pycparser==2.14
+pymongo==3.2.2
+pyparsing==2.2.0
+pyscard==1.9.5
 python-Levenshtein==0.12.0
-pytz==2016.4              # via apscheduler, tzlocal
-six==1.10.0               # via apscheduler, bcrypt
-tzlocal==1.2.2            # via apscheduler
-Werkzeug==0.11.9          # via flask, flask-wtf
-WTForms==2.1              # via flask-wtf
+python-memcached==1.58
+pytz==2016.4
+six==1.10.0
+tox==2.7.0
+tzlocal==1.2.2
+virtualenv==15.1.0
+Werkzeug==0.11.9
+WTForms==2.1
