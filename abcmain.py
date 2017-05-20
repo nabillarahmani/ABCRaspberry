@@ -1,9 +1,12 @@
 from flask import Flask
+from flask import Response
 from flask import redirect
 from flask import render_template
+from flask import render_template_string
 from flask import request
-from flask import url_for
 from flask import session
+from flask import stream_with_context
+from flask import url_for
 from flask_dotenv import DotEnv
 from smartcard.System import readers
 from beaker.middleware import SessionMiddleware
@@ -11,7 +14,7 @@ from smartcard.Exceptions import NoCardException
 from smartcard.System import readers
 from smartcard.util import toHexString
 from binascii import unhexlify, b2a_base64
-
+import time
 
 app = Flask(__name__)
 env = DotEnv()
@@ -21,13 +24,22 @@ env.eval(keys={
 	'TESTING': bool
 })
 
-
 @app.route("/")
 def index():
+	import time
 	"""
 		Render the view of index page.
 	"""
-	return render_template('index.html', title='', current_page='ABC Gate Home')
+	r = readers()
+	reader = r[0]
+	connection = reader.createConnection()
+	while connection is not None:
+		try:
+			connection.connect()
+			return redirect(url_for('readcard'))
+		except:
+			continue	
+	# render_template('index.html', title='', current_page='ABC Gate Home')
 
 
 def get_hex_string(array_of_hex, start, end):
@@ -187,9 +199,6 @@ def readcard():
 					APDU_GET_DATA_1.pop()
 					iteration -= 1
 
-		# print(respond_data_1)
-		# print(len(respond_data_1))
-
 		# initialize the length of variable needed
 		length_identification_number_start 	= 0
 		length_identification_number_end 	= 0
@@ -240,10 +249,8 @@ def readcard():
 				length_fingerprint_end += data
 			i += 1
 
-		respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : '', 'photo':''}
-		# print(length_identification_number_start)
-		# print(length_identification_number_end)
-
+		respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : '', 'photo':'', 'fingerprint':''}
+		
 		# check if each mapped data is exist
 		# Get data for identification number
 		if field_map[2] == "1":
@@ -283,19 +290,8 @@ def readcard():
 				hex_string = hex(data)[2:].zfill(2)
 				photo += hex_string
 			
-			string = base64.b64encode(unhexlify(photo))
 			respond_mapped['photo'] = photo
-			# print(string)
-			# result = b2a_base64(unhexlify(photo))
-			# print(result)
-			# res = photo.decode("hex").encode("base64")
-			# print(res)
-			convert = base64.b64decode(string)
-			# t = open("nyem.png", "w+")
-			# t.write(convert)
-			# t.close()
-
-			# Store the value into session
+			
 
 		fingerprint = ""	
 		if field_map[12] == "1":
@@ -313,6 +309,7 @@ def readcard():
 
 			respond_mapped['fingerprint'] = fingerprint
 		
+		# Store the value into session
 		if not 'data_readcard' in session:
 			session['data_readcard'] = respond_mapped
 		else:
@@ -326,11 +323,27 @@ def readcard():
 		return e
 
 
-def verification_document(extract_fingerprint, extract_picture):
+def get_picture(image):
+
+
+
+def verification_document(extract_fingerprint, extract_fingerprint_smartcard):
+	import face_recognition
 	"""
 		This will match between the data on smart card and on the given fingerprint
 	"""
-	return True	
+	real_fingerprint = get_picture("dummy.jpg")
+	card_fingerprint = get_picture(extract_fingerprint_smartcard)
+
+	known_image = face_recognition.load_image_file(real_fingerprint)
+	unknown_image = face_recognition.load_image_file(card_fingerprint)
+
+	biden_encoding = face_recognition.face_encodings(known_image)[0]
+	unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
+
+	results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
+
+	return results[0]
 
 
 def verification_cekal(identification_number):
@@ -338,6 +351,7 @@ def verification_cekal(identification_number):
 		This method will send a GET request into the API and retrieve cekal status
 	"""
 	return True
+	
 
 
 @app.route("/readfingerprint")
@@ -351,7 +365,7 @@ def readfingerprint():
 
 
 @app.route("/verification_process")
-def process_verification():
+def verification_process():
 	"""
 		This method will check the verification process between person to document
 		This method will also check to server cekal
@@ -361,16 +375,50 @@ def process_verification():
 	if 'data_fingerprint' in session:
 		fingerprint_extract = session['data_fingerprint']
 	else:
-		# redirect again into /readfingerprint
-		return redirect(url_for('readfingerprint'))
+		# show error there's no data in smartcard session
+		pass
 	
+	smartcard_extract = {}
+	if 'data_readcard' in session:
+		smartcard_extract = session['data_readcard']
+	else:
+		# show error there's no data in smartcard session
+		pass
+
+	fingerprint_extract_smartcard = smartcard_extract['fingerprint']
+	result_fingerprint = verification_document(fingerprint_extract, fingerprint_extract_smartcard)
+
+	status_cekal = False
+	session['verifikasi_fingerprint'] = result_fingerprint
+	if result_fingerprint:
+		#if succeeed then call the API
+		# Asumsikan API selalu menyala
+		if smartcard_extract['identification_number'] is not None:
+			status_cekal = verification_cekal(smartcard_extract['identification_number'])
+			session['status_cekal'] = status_cekal
+		else:
+			render_template('failed_identification_number.html')
+	else:
+		#show fingerprint not match!
+		render_template('failed_fingerprint_verification.html')
+	
+	if result_fingerprint and status_cekal:
+		render_template('succeed_verification.html')	
+	else:
+		render_template('failed_verification.html')
+		
+	return redirect(url_for('get_camera_data'))
 
 
-
-def retrieve_image():
+def take_image():
+	import os
+	import time
 	"""
+		This method will take the picture of the traveller
 	"""
-	pass
+	waktu = time.strftime("%Y-%m-%d") + "_" + time.strftime("%H-%M-%S")
+ 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q var/www/html/photos/"+waktu+".jpg")
+ 	return 
 
 
 def send_image():
@@ -378,25 +426,52 @@ def send_image():
 	"""
 	pass
 
-
+@app.route("/logging")
 def logging():
+	import request
 	"""
+		This method will do the logging
 	"""
-	pass
+	# TODO IMPLEMENT LOGGING INTO THE SERVER LOGGING
+
+	# Destroy session for next use!
+	for key in session.keys():
+		session.pop[key]
+
+	return redirect_url(url_for('index'))
 
 
 @app.route("/get_camera_data")
 def get_camera_data():
 	"""
-	"""
-	pass
+		This method will captured the traveller photo and store it into logging folder
+	"""	
+	take_image()
+	send_image()
+	if session['verifikasi_fingerprint'] and session['status_cekal']:
+		return redirect(url_for('open_gate'))
+	else:
+		return redirect(url_for('logging'))
 
 
 @app.route("/open_gate")
 def open_gate():
+	import RPi.GPIO as GPIO
 	"""
+		This method will switch the gate, so that the traveller can pass the gate
 	"""
-	pass
+	# setting a current mode
+	GPIO.setmode(GPIO.BCM)
+	#removing the warings 
+	GPIO.setwarnings(False)
+	#creating a list (array) with the number of GPIO's that we use 
+	pin = 18 
+	#setting the mode for all pins so all will be switched on 
+	GPIO.setup(pin, GPIO.OUT)
+	GPIO.output(pin,  GPIO.HIGH)
+	#cleaning all GPIO's 
+	GPIO.cleanup()
+	return redirect_url(url_for('logging'))
 
 
 @app.errorhandler(404)
