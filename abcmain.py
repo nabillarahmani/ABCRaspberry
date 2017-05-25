@@ -324,33 +324,48 @@ def readcard():
 
 
 def get_picture(image):
+	"""
+		This method will respectively convert a binary file into base64 encode
+		and return into the caller
+	"""
+	string = base64.b64encode(image)
 
+	t = open("result.png", "w+")
+	t.write(string)
+	t.close()
+
+	f = open("result.png")
+	data = f.read()
+	f.close()
+	return data
 
 
 def verification_document(extract_fingerprint, extract_fingerprint_smartcard):
 	import face_recognition
 	"""
-		This will match between the data on smart card and on the given fingerprint
+		This will match between the data_readcarda on smart card and on the given fingerprint
 	"""
-	real_fingerprint = get_picture("dummy.jpg")
-	card_fingerprint = get_picture(extract_fingerprint_smartcard)
+	# real_fingerprint = get_picture("dummy.jpg")
+	# card_fingerprint = get_picture(extract_fingerprint_smartcard)
 
-	known_image = face_recognition.load_image_file(real_fingerprint)
-	unknown_image = face_recognition.load_image_file(card_fingerprint)
+	# known_image = face_recognition.load_image_file(real_fingerprint)
+	# unknown_image = face_recognition.load_image_file(card_fingerprint)
 
-	biden_encoding = face_recognition.face_encodings(known_image)[0]
-	unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
+	# biden_encoding = face_recognition.face_encodings(known_image)[0]
+	# unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
 
-	results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
+	# results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
 
-	return results[0]
+	# return results[0]
+	return True
 
 
 def verification_cekal(identification_number):
+	import request
 	"""
 		This method will send a GET request into the API and retrieve cekal status
 	"""
-	return True
+	return 
 	
 
 
@@ -469,6 +484,8 @@ def open_gate():
 	#setting the mode for all pins so all will be switched on 
 	GPIO.setup(pin, GPIO.OUT)
 	GPIO.output(pin,  GPIO.HIGH)
+	time.sleep(0.5)
+	GPIO.output(pin, GPIO.LOW)
 	#cleaning all GPIO's 
 	GPIO.cleanup()
 	return redirect_url(url_for('logging'))
