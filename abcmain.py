@@ -75,6 +75,70 @@ def parse_field_map(hex_string):
 	return string_binary_field
 
 
+def convert(image):
+    f = open(image)
+    data = f.read()
+    f.close()
+
+    string = base64.b64encode(data)
+    convert = base64.b64decode(string)
+
+    t = open("example.png", "w+")
+    t.write(convert)
+    t.close()
+
+
+def get_apdu_command(connection, APDU, offset_1, offset_2, length):
+	APDU.append(offset_1)
+	APDU.append(offset_2)
+	APDU.append(length)
+	result, sw1, sw2 = connection.transmit(APDU)
+	return result, sw1, sw2
+
+
+def select_apdu_command(connection, APDU):
+	result, sw1, sw2 = connection.transmit(APDU)
+	return result, sw1, sw2
+
+
+def hexstring_to_decimal(hex_representation):
+	"""
+	@param : a number which contain 4 string hex_representation
+	@return: a decimal which indicates a number of 4 digit hex representation
+	"""
+	return int("0x"+hex_representation, 16)
+
+
+def change_offset(offset, addition):
+	total_addition = int(offset) + int(addition)
+	print(total_addition)
+	# print ("total additon in int : {} and total_addition in hex : {}".format(total_addition, hex(total_addition)))
+	hex_representation = str(hex(total_addition)[2:]).zfill(4)
+	first_offset = "0x"+hex_representation[:2]
+	second_offset = "0x"+hex_representation[2:]
+	# print("hex_representation : {} , first_offset : {}, second_offset : {} \n".format(hex_representation, first_offset, second_offset))
+	first_offset = int(first_offset, 16)
+	second_offset = int(second_offset, 16)
+	return first_offset, second_offset
+
+
+def get_total_length_map(length_map, start, end):
+	total_length = 0
+	i = 1
+	length = "0"
+	for data in length_map[start:end]:
+		if i % 2  != 0:
+			length = "0x" + length
+			total_length += int(length, 16)
+			# print("total_length now :{}".format(total_length))
+			length = ""
+		length += str(hex(data)[2:]).zfill(2)
+		# print("length now: {}".format(length))
+		i += 1
+	total_length += int(length, 16)
+	return total_length
+
+
 # Implementation of readcard using highlevel implementation
 @app.route("/readcard")
 def readcard():
@@ -84,45 +148,49 @@ def readcard():
 	"""
 	try:
 		r = readers()
-		# print("Available readers:", r)
+		print("Available readers:", r)
 
 		reader = r[0]
-		# print ("Using:", reader)
+		print ("Using:", reader)
 
 		connection = reader.createConnection()
 		connection.connect()
 
+
 		# SELECT MF
 		SELECT = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00]
 
-		data, sw1, sw2 = connection.transmit(SELECT)
+		data, sw1, sw2 = select_apdu_command(connection, SELECT)
 
 
 		if sw1  == None and sw2 == None:
 			# discard connection on card
-			# print("failed to render card")
-			pass
+			#
+			print("failed to render card")
 
 		# Select DF
 		APDU_DF = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x10, 0x01]
-		data, sw1, sw2 = connection.transmit(APDU_DF)
+		data, sw1, sw2 = select_apdu_command(connection, APDU_DF)
 
 		# SELECT EF
 		APDU_EF = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0xFF]
-		data, sw1, sw2 = connection.transmit(APDU_EF)
+		data, sw1, sw2 = select_apdu_command(connection, APDU_EF)
 
+
+		APDU_GET = [0x00, 0xB0]
 		# GET CARD TYPE
-		APDU_CARD = [0x00, 0xB0, 0x00, 0x00, 0x02]
-		data, sw1, sw2 = connection.transmit(APDU_CARD)
+		data_card, sw1, sw2 = get_apdu_command(connection, APDU_GET, 0, 0, 2)
+
 
 		# SELECT EF (FIELD MAP + LENGTH MAP)
 		APDU_FIELD 		= [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x00]
-		data, sw1, sw2 	= connection.transmit(APDU_FIELD)
+		data, sw1, sw2 	= select_apdu_command(connection, APDU_FIELD)
 
 		#Get field map + length map
-		APDU_GET_FIELD 	= [0x00, 0xB0, 0x00, 0x00, 0x33]
-		data, sw1, sw2 	= connection.transmit(APDU_GET_FIELD)
-		flag_empty 		= True	
+		APDU_GET = [0x00, 0xB0]
+		data, sw1, sw2 	= get_apdu_command(connection, APDU_GET, 0, 0, 51)
+
+		flag_empty 		= True		
 		
 		# Check for each element whether it is filled yet or not
 		for element in data:
@@ -242,6 +310,7 @@ def readcard():
 					length_photo_start = start_offset
 					length_photo_end = start_offset
 				length_photo_end += data
+			
 			if i >= 24 and i <= 25:
 				if i == 24:
 					length_fingerprint_start = start_offset
