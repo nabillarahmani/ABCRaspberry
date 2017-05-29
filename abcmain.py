@@ -23,6 +23,8 @@ env.eval(keys={
 	'TESTING': bool
 })
 
+url = './data/'
+
 @app.route("/")
 def index():
 	import time
@@ -38,7 +40,6 @@ def index():
 			return redirect(url_for('readcard'))
 		except:
 			continue	
-	# render_template('index.html', title='', current_page='ABC Gate Home')
 
 
 def get_hex_string(array_of_hex, start, end):
@@ -72,19 +73,6 @@ def parse_field_map(hex_string):
 	h_size = len(hex_string) * 4
 	string_binary_field = (bin(int(hex_string, 16))[2:] ).zfill(h_size)
 	return string_binary_field
-
-
-def convert(image):
-    f = open(image)
-    data = f.read()
-    f.close()
-
-    string = base64.b64encode(data)
-    convert = base64.b64decode(string)
-
-    t = open("example.png", "w+")
-    t.write(convert)
-    t.close()
 
 
 def get_apdu_command(connection, APDU, offset_1, offset_2, length):
@@ -138,7 +126,6 @@ def get_total_length_map(length_map, start, end):
 
 @app.route("/readcard")
 def readcard():
-	import sys
 	"""
 	Implementation of readcard using highlevel implementation
 		
@@ -153,7 +140,6 @@ def readcard():
 		connection = reader.createConnection()
 		connection.connect()
 
-
 		# SELECT MF
 		SELECT = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x3F, 0x00]
 
@@ -162,7 +148,6 @@ def readcard():
 
 		if sw1  == None and sw2 == None:
 			# discard connection on card
-			#
 			print("failed to render card")
 
 		# Select DF
@@ -196,11 +181,13 @@ def readcard():
 				flag_empty = False
 
 		if flag_empty == True:
-			#sdcard disconnect
-			# print("error")
+			connection.disconnect()
+			print("error")
 			pass
 
-		if data_card != 2:
+		if data_card[1] != 2:
+			connection.disconnect()
+			print("errorhandler")
 			pass
 			# do eject card here
 
@@ -224,6 +211,7 @@ def readcard():
 		# handle if content inside card is null
 		if sw1 == None and sw2 == None:
 			#sdcard disconnect
+			connection.disconnect()
 			print('error')
 
 		iteration = total_length_data_1 / 252
@@ -356,17 +344,13 @@ def readcard():
 				fingerprint += str(chr(data))
 			respond_mapped['fingerprint'] = fingerprint
 
-		url = './data/'
 		if photo is not '':
-			t = open(url+'photo_taken', "w+")
-			t.write(photo)
-			t.close()	
+			write_data_to_file(url+'photo_taken', photo)	
 
 		if fingerprint is not '':
-			t = open(url+'/fingerprint_taken', "w+")
-			t.write(fingerprint)
-			t.close()
+			write_data_to_file(url+'/fingerprint_taken', fingerprint)
 
+		# Write the data so that it would be sufficient to access it later!
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
 		t = open(url+'information_taken.txt', "w+")
@@ -379,19 +363,22 @@ def readcard():
 		return e
 
 
-def get_picture(image):
+def get_data_from_file(data):
 	"""
-		This method will respectively convert a binary file into base64 encode
-		and return into the caller
+		This method will read the binary data from binary file
+		@param : any relative path to desired file
+		@return: a binary data which represent the given data
 	"""
-	t = open("result.png", "w+")
-	t.write(string)
-	t.close()
-
-	f = open("result.png")
+	f = open(data)
 	data = f.read()
 	f.close()
 	return data
+
+
+def write_data_to_file(path, data):
+	f = open(path, 'w+')
+	f.write(data)
+	f.close()
 
 
 def verification_document(extract_fingerprint, extract_fingerprint_smartcard):
@@ -416,7 +403,6 @@ def readfingerprint():
 		It will store the fingerprint extract onto session and pass it into verification_process
 	"""
 	return redirect(url_for('verification_process'))
-	# return redirect(url_for('verification_process'))
 
 
 @app.route("/verification_process")
@@ -430,9 +416,7 @@ def verification_process():
 	# Get the fingerprint data
 	fingerprint_extract = ''
 	if os.path.isfile(url + 'fingerprint'):
-		f = open(url + 'fingerprint')
-		fingerprint_extract = f.read()
-		f.close()
+		fingerprint_extract = get_data_from_file(url + 'fingerprint')
 	else:
 		# do nothing because the implementation will be implemented soon
 		pass
@@ -441,12 +425,11 @@ def verification_process():
 	# Get the identification number and fullname data from the
 	# file information_taken.txt 
 	if os.path.isfile(url +'information_taken.txt'):
-		f = open(url +'information_taken.txt')
-		datas = f.read()
+		datas = get_data_from_file(url + 'information_taken.txt')
 		datas = datas.split("\n")
 		for data in datas:
 			smartcard_extract[data.split(':')[0]] = data.split(':')[1]
-		f.close
+			session[data.split(':')[0]] = data.split(':')[1]
 	else:
 		# show error there's no data in smartcard session
 		pass
@@ -454,9 +437,7 @@ def verification_process():
 	# Get the data for photo taken
 	photo_taken = ''
 	if os.path.isfile(url + 'photo_taken'):
-		f = open(url + 'photo_taken')
-		photo_taken = f.read()
-		f.close()
+		photo_taken = get_data_from_file(url + 'photo_taken')
 	else:
 		# show error
 		pass 
@@ -465,9 +446,7 @@ def verification_process():
 	fingerprint_taken = ''
 	photo_taken = ''
 	if os.path.isfile(url + 'fingerprint_taken'):
-		f = open(url + 'fingerprint_taken')
-		fingerprint_taken = f.read()
-		f.close()
+		fingerprint_taken = get_data_from_file(url + 'fingerprint_taken')
 	else:
 		# show error
 		pass
@@ -512,15 +491,44 @@ def take_image():
 
 @app.route("/logging")
 def logging():
-	import os, shutil, os.path
+	import requests
 	"""
 		This method will do the logging
 	"""
 	# TODO IMPLEMENT LOGGING INTO THE SERVER LOGGING
+	data_logging = {'identification_number': '', 'full_name': '', 'photo_taken' : '', 'status_cekal' : False}
+	
+	if 'identification_number' in session:
+		data_logging['identification_number'] = session['identification_number']
+	if 'fullname' in session:
+		data_logging['fullname'] = session['fullname']
+	# Get the data for status cekal
+	if 'status_cekal' in session:
+		data_logging['status_cekal'] = session['status_cekal']
+	# Get the data for photo traveller
+	photo_taken = ''
+	if os.path.isfile(url + 'traveller.jpg'):
+		photo_taken = get_data_from_file(url + 'traveller.jpg')
+	else:
+		# show error
+		pass 
+	data_logging['photo_taken'] = photo_taken
 
+	result = requests.post("", data=data_logging)
+	print(result.status_code, result.reason)
+
+	return redirect(url_for('closing_connection'))
+
+
+@app.route("/closing_connection")
+def closing_connection():
+	import time
+	import os, shutil, os.path
+	"""
+		This method will ask the user the reject the card!
+	"""
 	# Destroy session for next use!
 	session.clear()
-
 	# Destroy all files within data directory!
 	folder = 'data/'
 	for the_file in os.listdir(folder):
@@ -531,29 +539,16 @@ def logging():
 				#elif os.path.isdir(file_path): shutil.rmtree(file_path)
 		except Exception as e:
 			print(e)
+	# Write file is_exist_card for an ajax to check it
+	write_data_to_file("is_exist_card", 'data_exist')
 
-	return redirect(url_for('eject_card'))
-
-
-@app.route("/eject_card")
-def eject_card():
-	import os
-	"""
-		This method will ask the user the reject the card!
-	"""
-	t = open("is_exist_card", "w+")
-	t.write('data_exist')
-	t.close()
 	r = readers()
 	reader = r[0]
 	connection = reader.createConnection()
-	while True:
-		try:
-			if connection.connect() is None:
-				os.remove('is_exist_card')
-				return redirect(url_for('index'))
-		except:
-			continue
+	connection.disconnect()
+	time.sleep(10) # delays for 5 seconds
+	os.remove('is_exist_card')
+	return redirect(url_for('index'))
 
 
 @app.route("/get_camera_data")
@@ -562,6 +557,7 @@ def get_camera_data():
 		This method will captured the traveller photo and store it into logging folder
 	"""	
 	take_image()
+	# If verification succeed
 	if session['verifikasi_fingerprint'] and session['status_cekal']:
 		return redirect(url_for('logging'))
 	else:
@@ -584,7 +580,7 @@ def open_gate():
 	#setting the mode for all pins so all will be switched on 
 	GPIO.setup(pin, GPIO.OUT)
 	GPIO.output(pin,  GPIO.HIGH)
-	time.sleep(0.5)
+	time.sleep(1)
 	GPIO.output(pin, GPIO.LOW)
 	#cleaning all GPIO's 
 	GPIO.cleanup()
@@ -609,5 +605,5 @@ def internal_server_error(err):
 
 if __name__ == "__main__":
 	# app.wsgi_app = SessionMiddleware(app.wsgi_app, session_opts)
-	app.secret_key = '123jansdkansjk'
+	app.secret_key = 'ansdjsakd12n3kj1'
 	app.run(host=app.config['HOST'], port=int(app.config['PORT']))
