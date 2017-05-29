@@ -3,7 +3,6 @@ from flask import Response
 from flask import redirect
 from flask import render_template
 from flask import render_template_string
-from flask import request
 from flask import session
 from flask import stream_with_context
 from flask import url_for
@@ -203,87 +202,74 @@ def readcard():
 			# print("error")
 			pass
 
+		if data_card != 2:
+			pass
+			# do eject card here
+
 		# get the hex representation of respond
 		# parse the first 3 bits from the respond to check the length
 		# Field map = 10101010100011 (in binary) contains 3 bytes of binary representation
+		# print "data : {}\n".format(data)
 		respond_field_map 	= get_array_hex(data)
-		# print(respond_field_map)
+		print(data)
+		print(get_array_hex(data))
+
 
 		field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
-		print("field map:")
-		print(field_map)
+		print("field map : {}\n".format(field_map))
 
-		# Get the total length of map
-		total_length_map= 0
-		length_map 		= data[3:]
-		print("length map:")
-		print(length_map)
-		print(data)
-		for x in length_map:
-			total_length_map += x
+		# Get the total length map of data 1
+		length_map = data[3:]
 
-		# print(total_length_map)
+		total_length_data_1 = get_total_length_map(length_map, 0, 18)
+		print("length map: {}, total_length : {}\n".format(length_map, total_length_data_1))
 
 		# SELECT EF FOR FIRST DATA 
 		APDU_SELECT_DATA_1 = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x01]
-		data, sw1, sw2 = connection.transmit(APDU_SELECT_DATA_1)			
+		data, sw1, sw2 = select_apdu_command(connection, APDU_SELECT_DATA_1)			
 
 		# handle if content inside card is null
 		if sw1 == None and sw2 == None:
 			#sdcard disconnect
-			pass
-			# print('error')
+			print('error')
 
-		iteration 		= total_length_map / 240
-		APDU_GET_DATA_1	= [0x00, 0xB0, 0x00, 0x00]
+		iteration = total_length_data_1 / 252
+		remainder = total_length_data_1 % 252
+		APDU_GET = [0x00, 0xB0]
 		respond_data_1	= []
 
-		if total_length_map < 240:
-			APDU_GET_DATA_1.append(total_length_map)
-			respond_data_1, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)	
+		if total_length_data_1 < 252:
+			respond_data_1, sw1, sw2 = get_apdu_command(connection, APDU_GET, 0, 0, total_length_data_1)
 		else:
-			while iteration >= 0:
-				if (total_length_map - 240) > 0 :
-					# By default take 240 bytes from the card
-					APDU_GET_DATA_1.append(240)
-					data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
-					if sw1 == None and sw2 == None:
-						pass
-						#sdcard disconnect
-						# print('error')
-					respond_data_1.extend(data)
-					APDU_GET_DATA_1.pop()
-					iteration -= 1
-				else:
-					# If smaller than the threshold then, take the remainder
-					remainder = total_length_map - 240
-					APDU_GET_DATA_1.append(remainder)
-					data, sw1, sw2 = connection.transmit(APDU_GET_DATA_1)
-					if sw1 == None and sw2 == None:
-						pass
-						#sdcard disconnect
-						# print('error')
-					respond_data_1.extend(data)
-					APDU_GET_DATA_1.pop()
-					iteration -= 1
+			offset_1 = 0
+			offset_2 = 0
+			while iteration > 0:
+				APDU_GET = [0x00, 0xB0]
+				data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, 252)
+				total_offset = get_total_length_map([offset_1,offset_2], 0, 2)
+				offset_1, offset_2 = change_offset(total_offset, 252)
+				respond_data_photo.extend(data)
+				iteration -= 1
+			if remainder != 0:
+				APDU_GET = [0x00, 0xB0]
+				data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, remainder)
+				respond_data_1.extend(data)
+
+		print("respond data 1 : {} and its length : {}\n".format(respond_data_1, len(respond_data_1	)))
 
 		# initialize the length of variable needed
 		length_identification_number_start 	= 0
 		length_identification_number_end 	= 0
 		length_full_name_start 				= 0
 		length_full_name_end 				= 0
-		length_icao_2_start					= 0
-		length_icao_2_end					= 0
 		length_photo_start					= 0
 		length_photo_end					= 0
 		length_fingerprint_start			= 0
 		length_fingerprint_end				= 0 
 
 		# Iterate the length map to get the start and end of each data
-
 		i = 0
 		start_offset = 0
-
 		# Getting the start and end index of length
 		for data in length_map:
 			start_offset += data
@@ -299,28 +285,25 @@ def readcard():
 					length_full_name_end = start_offset
 				length_full_name_end += data
 
-			if i>= 20 and i <= 21:
-				if i == 20:
-					length_icao_2_start = start_offset
-					length_icao_2_end = start_offset
-				length_icao_2_end += data
-
 			if i >= 22 and i <= 23:
 				if i == 22:
 					length_photo_start = start_offset
 					length_photo_end = start_offset
 				length_photo_end += data
-			
+
 			if i >= 24 and i <= 25:
 				if i == 24:
 					length_fingerprint_start = start_offset
 					length_fingerprint_end = start_offset
 				length_fingerprint_end += data
+			
 			i += 1
 
-		respond_mapped = {'identification_number': '', 'full_name': '', 'icao_2' : '', 'photo':'', 'fingerprint':''}
-		
+		respond_mapped = {'identification_number': '', 'full_name': '', 'fingerprint' : '', 'photo' : ''}
+
 		# check if each mapped data is exist
+		# print(field_map)
+		# print(field_map[2] == "1")
 		# Get data for identification number
 		if field_map[2] == "1":
 			for data in respond_data_1[length_identification_number_start:length_identification_number_end]:
@@ -330,54 +313,87 @@ def readcard():
 			for data in respond_data_1[length_full_name_start:length_full_name_end]:
 				respond_mapped['full_name'] += str(chr(data))
 
-		# Get data for data ICAO 2
-		if field_map[10] == "1":
-			APDU_SELECT_ICAO_2 = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x03]
-			data, sw1, sw2 = connection.transmit(APDU_SELECT_ICAO_2)
-			
-			APDU_GET_ICAO_2 = [0x00, 0xB0, 0x00, 0x00]
-			APDU_GET_ICAO_2.extend(length_icao_2_end - length_icao_2_start)
-
-			data_icao, sw1, sw2 = connection.transmit(APDU_GET_ICAO_2)
-
-			for data in data_icao:
-				respond_mapped['icao_2'] += str(chr(data))
-
 		photo = ""
+		respond_data_photo = []
 		# Get data for data photo
 		if field_map[11] == "1":
+			total_length_data_photo = get_total_length_map(length_map, 22, 24)
 			APDU_SELECT_PHOTO = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x04]
 			data, sw1, sw2 = connection.transmit(APDU_SELECT_PHOTO)
-			length_byte = length_photo_end - length_photo_start
-			APDU_GET_PHOTO = [0x00, 0xB0, 0x00, 0x00]
-			APDU_GET_PHOTO.append(length_byte)
-
-			data_photo, sw1, sw2 = connection.transmit(APDU_GET_PHOTO)
-			# print(data_photo)
-			for data in data_photo:
-				# do base64 encode to get the photo data
-				hex_string = hex(data)[2:].zfill(2)
-				photo += hex_string
+			iteration = total_length_data_photo / 252
+			remainder = total_length_data_photo % 252
+			APDU_GET = [0x00, 0xB0]
 			
+			if total_length_data_photo < 252:
+				respond_data_photo, sw1, sw2 = get_apdu_command(connection, APDU_GET, 0, 0, total_length_data_photo)
+			else:
+				offset_1 = 0
+				offset_2 = 0
+				while iteration > 0:
+					APDU_GET = [0x00, 0xB0]
+					data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, 252)
+					total_offset = get_total_length_map([offset_1, offset_2], 0, 2)
+					offset_1, offset_2 = change_offset(total_offset, 252)
+					respond_data_photo.extend(data)
+					iteration -= 1
+				if remainder != 0:
+					APDU_GET = [0x00, 0xB0]
+					data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, remainder)
+					respond_data_photo.extend(data)
+
+			for data in respond_data_photo:
+				photo += str(chr(data))
 			respond_mapped['photo'] = photo
 			
 
-		fingerprint = ""	
+		fingerprint = ""
+		respond_data_fingerprint = []
 		if field_map[12] == "1":
+			total_length_data_fingerprint = get_total_length_map(length_map, 24, 26)
 			APDU_SELECT_FINGERPRINT = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x05]
 			data, sw1, sw2 = connection.transmit(APDU_SELECT_FINGERPRINT)
-			length_byte = length_fingerprint_end - length_fingerprint_start
-			APDU_GET_FINGERPRINT = [0x00, 0xB0, 0x00, 0x00]
-			APDU_GET_PHOTO.append(length_byte)
+			iteration = total_length_data_fingerprint / 252
+			remainder = total_length_data_fingerprint % 252
+			APDU_GET_FINGERPRINT = [0x00, 0xB0]
 
-			data_fingerprint = connection.transmit(APDU_GET_FINGERPRINT)
+			if total_length_data_fingerprint < 252:
+				respond_data_fingerprint, sw1, sw2 = get_apdu_command(connection, APDU_GET, 0, 0, total_length_data_fingerprint)
+			else:
+				offset_1 = 0
+				offset_2 = 0
+				while iteration > 0:
+					APDU_GET = [0x00, 0xB0]
+					data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, 252)
+					total_offset = get_total_length_map([offset_1, offset_2], 0, 2)
+					offset_1, offset_2 = change_offset(total_offset, 252)
+					respond_data_fingerprint.extend(data)
+					iteration -= 1
+				if remainder != 0:
+					APDU_GET = [0x00, 0xB0]
+					data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, remainder)
+					respond_data_fingerprint.extend(data)
 
-			for data in data_fingerprint:
-				hex_string = hex(data)[2:].zfill(2)
-				fingerprint += hex_string
-
+			for data in respond_data_fingerprint:
+				fingerprint += str(chr(data))
 			respond_mapped['fingerprint'] = fingerprint
+
+		if photo is not None:
+			t = open("photo_taken", "w+")
+			t.write(photo)
+			t.close()	
+
+		if fingerprint is not None:
+			t = open("fingerprint_taken", "w+")
+			t.write(fingerprint)
+			t.close()
 		
+		t = open("user_information.txt", "w+")
+		t.write("identification_number : {}\n".format(respond_mapped['identification_number']))
+		t.write("fullname : {}".format(respond_mapped['fullname']))
+		t.close()
+		
+		print("Respond data mapped now : {}".format(respond_mapped))
+
 		# Store the value into session
 		if not 'data_readcard' in session:
 			session['data_readcard'] = respond_mapped
@@ -397,8 +413,6 @@ def get_picture(image):
 		This method will respectively convert a binary file into base64 encode
 		and return into the caller
 	"""
-	string = base64.b64encode(image)
-
 	t = open("result.png", "w+")
 	t.write(string)
 	t.close()
@@ -410,33 +424,19 @@ def get_picture(image):
 
 
 def verification_document(extract_fingerprint, extract_fingerprint_smartcard):
-	import face_recognition
 	"""
 		This will match between the data_readcarda on smart card and on the given fingerprint
 	"""
-	# real_fingerprint = get_picture("dummy.jpg")
-	# card_fingerprint = get_picture(extract_fingerprint_smartcard)
-
-	# known_image = face_recognition.load_image_file(real_fingerprint)
-	# unknown_image = face_recognition.load_image_file(card_fingerprint)
-
-	# biden_encoding = face_recognition.face_encodings(known_image)[0]
-	# unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
-
-	# results = face_recognition.compare_faces([biden_encoding], unknown_encoding)
-
-	# return results[0]
 	return True
 
 
 def verification_cekal(identification_number):
-	import request
+	from flask import request
 	"""
 		This method will send a GET request into the API and retrieve cekal status
 	"""
-	return 
+	return True
 	
-
 
 @app.route("/readfingerprint")
 def readfingerprint():
@@ -505,11 +505,6 @@ def take_image():
  	return 
 
 
-def send_image():
-	"""
-	"""
-	pass
-
 @app.route("/logging")
 def logging():
 	import request
@@ -531,7 +526,6 @@ def get_camera_data():
 		This method will captured the traveller photo and store it into logging folder
 	"""	
 	take_image()
-	send_image()
 	if session['verifikasi_fingerprint'] and session['status_cekal']:
 		return redirect(url_for('open_gate'))
 	else:
