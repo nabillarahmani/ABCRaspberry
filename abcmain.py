@@ -355,19 +355,21 @@ def readcard():
 				fingerprint += str(chr(data))
 			respond_mapped['fingerprint'] = fingerprint
 
+		url = './data/'
 		if photo is not '':
-			t = open("photo_taken", "w+")
+
+			t = open(url+'photo_taken', "w+")
 			t.write(photo)
 			t.close()	
 
 		if fingerprint is not '':
-			t = open("fingerprint_taken", "w+")
+			t = open(url+'/fingerprint_taken', "w+")
 			t.write(fingerprint)
 			t.close()
 
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
-		t = open("user_information.txt", "w+")
+		t = open(url+'information_taken.txt', "w+")
 		t.write("identification_number : {}\n".format(fullname))
 		t.write("fullname : {}".format(identification_number))
 		t.close()
@@ -477,23 +479,33 @@ def take_image():
 	"""
 		This method will take the picture of the traveller
 	"""
- 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q pelintas.jpg")
+ 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q data/traveller.jpg")
  	return 
 
 
 @app.route("/logging")
 def logging():
-	import request
+	import os, shutil
 	"""
 		This method will do the logging
 	"""
 	# TODO IMPLEMENT LOGGING INTO THE SERVER LOGGING
 
 	# Destroy session for next use!
-	for key in session.keys():
-		session.pop[key]
+	session.clear()
 
-	return redirect_url(url_for('index'))
+	# Destroy all files within data directory!
+	folder = 'data/'
+	for the_file in os.listdir(folder):
+		file_path = os.path.join(folder, the_file)
+		try:
+			if os.path.isfile(file_path):
+			    os.unlink(file_path)
+				#elif os.path.isdir(file_path): shutil.rmtree(file_path)
+		except Exception as e:
+			print(e)
+
+	return redirect(url_for('index'))
 
 
 @app.route("/get_camera_data")
