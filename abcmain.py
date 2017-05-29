@@ -110,12 +110,9 @@ def hexstring_to_decimal(hex_representation):
 
 def change_offset(offset, addition):
 	total_addition = int(offset) + int(addition)
-	print(total_addition)
-	# print ("total additon in int : {} and total_addition in hex : {}".format(total_addition, hex(total_addition)))
 	hex_representation = str(hex(total_addition)[2:]).zfill(4)
 	first_offset = "0x"+hex_representation[:2]
 	second_offset = "0x"+hex_representation[2:]
-	# print("hex_representation : {} , first_offset : {}, second_offset : {} \n".format(hex_representation, first_offset, second_offset))
 	first_offset = int(first_offset, 16)
 	second_offset = int(second_offset, 16)
 	return first_offset, second_offset
@@ -211,18 +208,13 @@ def readcard():
 		# Field map = 10101010100011 (in binary) contains 3 bytes of binary representation
 		# print "data : {}\n".format(data)
 		respond_field_map 	= get_array_hex(data)
-		print(data)
-		print(get_array_hex(data))
-
 
 		field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
-		print("field map : {}\n".format(field_map))
 
 		# Get the total length map of data 1
 		length_map = data[3:]
 
 		total_length_data_1 = get_total_length_map(length_map, 0, 18)
-		print("length map: {}, total_length : {}\n".format(length_map, total_length_data_1))
 
 		# SELECT EF FOR FIRST DATA 
 		APDU_SELECT_DATA_1 = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x01]
@@ -255,7 +247,6 @@ def readcard():
 				data, sw1, sw2 = get_apdu_command(connection, APDU_GET, offset_1, offset_2, remainder)
 				respond_data_1.extend(data)
 
-		print("respond data 1 : {} and its length : {}\n".format(respond_data_1, len(respond_data_1	)))
 
 		# initialize the length of variable needed
 		length_identification_number_start 	= 0
@@ -284,19 +275,6 @@ def readcard():
 					length_full_name_start = start_offset
 					length_full_name_end = start_offset
 				length_full_name_end += data
-
-			if i >= 22 and i <= 23:
-				if i == 22:
-					length_photo_start = start_offset
-					length_photo_end = start_offset
-				length_photo_end += data
-
-			if i >= 24 and i <= 25:
-				if i == 24:
-					length_fingerprint_start = start_offset
-					length_fingerprint_end = start_offset
-				length_fingerprint_end += data
-			
 			i += 1
 
 		respond_mapped = {'identification_number': '', 'full_name': '', 'fingerprint' : '', 'photo' : ''}
@@ -377,23 +355,23 @@ def readcard():
 				fingerprint += str(chr(data))
 			respond_mapped['fingerprint'] = fingerprint
 
-		if photo is not None:
+		if photo is not '':
 			t = open("photo_taken", "w+")
 			t.write(photo)
 			t.close()	
 
-		if fingerprint is not None:
+		if fingerprint is not '':
 			t = open("fingerprint_taken", "w+")
 			t.write(fingerprint)
 			t.close()
-		
+
+		fullname = respond_mapped['full_name']
+		identification_number = respond_mapped['identification_number']
 		t = open("user_information.txt", "w+")
-		t.write("identification_number : {}\n".format(respond_mapped['identification_number']))
-		t.write("fullname : {}".format(respond_mapped['fullname']))
+		t.write("identification_number : {}\n".format(fullname))
+		t.write("fullname : {}".format(identification_number))
 		t.close()
 		
-		print("Respond data mapped now : {}".format(respond_mapped))
-
 		# Store the value into session
 		if not 'data_readcard' in session:
 			session['data_readcard'] = respond_mapped
@@ -496,12 +474,10 @@ def verification_process():
 
 def take_image():
 	import os
-	import time
 	"""
 		This method will take the picture of the traveller
 	"""
-	waktu = time.strftime("%Y-%m-%d") + "_" + time.strftime("%H-%M-%S")
- 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q var/www/html/photos/"+waktu+".jpg")
+ 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q pelintas.jpg")
  	return 
 
 
