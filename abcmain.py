@@ -135,11 +135,12 @@ def get_total_length_map(length_map, start, end):
 	return total_length
 
 
-# Implementation of readcard using highlevel implementation
+
 @app.route("/readcard")
 def readcard():
-	import base64
+	import sys
 	"""
+	Implementation of readcard using highlevel implementation
 		
 	"""
 	try:
@@ -357,7 +358,6 @@ def readcard():
 
 		url = './data/'
 		if photo is not '':
-
 			t = open(url+'photo_taken', "w+")
 			t.write(photo)
 			t.close()	
@@ -370,19 +370,10 @@ def readcard():
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
 		t = open(url+'information_taken.txt', "w+")
-		t.write("identification_number : {}\n".format(fullname))
-		t.write("fullname : {}".format(identification_number))
+		t.write("identification_number:{}\n".format(identification_number))
+		t.write("fullname:{}".format(fullname))
 		t.close()
 		
-		# Store the value into session
-		if not 'data_readcard' in session:
-			session['data_readcard'] = respond_mapped
-		else:
-			# Destroy the session and make a new one!
-			# Do implement destroy the session
-			session['data_readcard'] = respond_mapped
-			pass
-
 		return redirect(url_for('readfingerprint'))
 	except Exception as e:
 		return e
@@ -424,32 +415,68 @@ def readfingerprint():
 		This method will extract the fingerprint from the fingerprint reader
 		It will store the fingerprint extract onto session and pass it into verification_process
 	"""
-	session['data_fingerprint'] = 'sudah_ada'
 	return redirect(url_for('verification_process'))
+	# return redirect(url_for('verification_process'))
 
 
 @app.route("/verification_process")
 def verification_process():
+	import os.path
 	"""
 		This method will check the verification process between person to document
 		This method will also check to server cekal
 	"""
-	# Get the finger
+	url = './data/'
+	# Get the fingerprint data
 	fingerprint_extract = ''
-	if 'data_fingerprint' in session:
-		fingerprint_extract = session['data_fingerprint']
+	if os.path.isfile(url + 'fingerprint'):
+		f = open(url + 'fingerprint')
+		fingerprint_extract = f.read()
+		f.close()
 	else:
-		# show error there's no data in smartcard session
+		# do nothing because the implementation will be implemented soon
 		pass
-	
+
 	smartcard_extract = {}
-	if 'data_readcard' in session:
-		smartcard_extract = session['data_readcard']
+	# Get the identification number and fullname data from the
+	# file information_taken.txt 
+	if os.path.isfile(url +'information_taken.txt'):
+		f = open(url +'information_taken.txt')
+		datas = f.read()
+		datas = datas.split("\n")
+		for data in datas:
+			smartcard_extract[data.split(':')[0]] = data.split(':')[1]
+		f.close
 	else:
 		# show error there's no data in smartcard session
 		pass
 
-	fingerprint_extract_smartcard = smartcard_extract['fingerprint']
+	# Get the data for photo taken
+	photo_taken = ''
+	if os.path.isfile(url + 'photo_taken'):
+		f = open(url + 'photo_taken')
+		photo_taken = f.read()
+		f.close()
+	else:
+		# show error
+		pass 
+	smartcard_extract['photo_taken'] = photo_taken
+
+	fingerprint_taken = ''
+	photo_taken = ''
+	if os.path.isfile(url + 'fingerprint_taken'):
+		f = open(url + 'fingerprint_taken')
+		fingerprint_taken = f.read()
+		f.close()
+	else:
+		# show error
+		pass
+	smartcard_extract['fingerprint_taken'] = fingerprint_taken
+
+	print("smartcard_extract : {}".format(smartcard_extract))
+
+	# Check the whether the fingerprint taken is match with fingerprint data
+	fingerprint_extract_smartcard = smartcard_extract['fingerprint_taken']
 	result_fingerprint = verification_document(fingerprint_extract, fingerprint_extract_smartcard)
 
 	status_cekal = False
@@ -485,7 +512,7 @@ def take_image():
 
 @app.route("/logging")
 def logging():
-	import os, shutil
+	import os, shutil, os.path
 	"""
 		This method will do the logging
 	"""
@@ -505,7 +532,28 @@ def logging():
 		except Exception as e:
 			print(e)
 
-	return redirect(url_for('index'))
+	return redirect(url_for('eject_card'))
+
+
+@app.route("/eject_card")
+def eject_card():
+	import os
+	"""
+		This method will ask the user the reject the card!
+	"""
+	t = open("is_exist_card", "w+")
+	t.write('data_exist')
+	t.close()
+	r = readers()
+	reader = r[0]
+	connection = reader.createConnection()
+	while True:
+		try:
+			if connection.connect() is None:
+				os.remove('is_exist_card')
+				return redirect(url_for('index'))
+		except:
+			continue
 
 
 @app.route("/get_camera_data")
@@ -515,9 +563,10 @@ def get_camera_data():
 	"""	
 	take_image()
 	if session['verifikasi_fingerprint'] and session['status_cekal']:
-		return redirect(url_for('open_gate'))
-	else:
 		return redirect(url_for('logging'))
+	else:
+		return redirect(url_for('open_gate'))
+
 
 
 @app.route("/open_gate")
@@ -560,5 +609,5 @@ def internal_server_error(err):
 
 if __name__ == "__main__":
 	# app.wsgi_app = SessionMiddleware(app.wsgi_app, session_opts)
-	app.secret_key = 'nyemnyemnyem'
+	app.secret_key = '123jansdkansjk'
 	app.run(host=app.config['HOST'], port=int(app.config['PORT']))
