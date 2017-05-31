@@ -3,7 +3,9 @@ APScheduler==3.1.0
 bcrypt==2.0.0
 Beaker==1.8.1
 blinker==1.4
+certifi==2017.4.17
 cffi==1.6.0
+chardet==3.0.3
 distro==1.0.4
 Flask==0.10.1
 Flask-Bcrypt==0.7.1
@@ -19,6 +21,7 @@ Flask-Session==0.3.1
 Flask-WTF==0.12
 funcsigs==1.0.2
 futures==3.0.5
+idna==2.5
 itsdangerous==0.24
 Jinja2==2.8
 MarkupSafe==0.23
@@ -35,9 +38,11 @@ pyscard==1.9.5
 python-Levenshtein==0.12.0
 python-memcached==1.58
 pytz==2016.4
+requests==2.17.2
 six==1.10.0
 tox==2.7.0
 tzlocal==1.2.2
+urllib3==1.21.1
 virtualenv==15.1.0
 Werkzeug==0.11.9
 WTForms==2.1

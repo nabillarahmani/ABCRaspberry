@@ -389,11 +389,18 @@ def verification_document(extract_fingerprint, extract_fingerprint_smartcard):
 
 
 def verification_cekal(identification_number):
-	from flask import request
+	import requests
 	"""
 		This method will send a GET request into the API and retrieve cekal status
 	"""
-	return True
+	result = False
+	try:
+		data = {'identification_number':identification_number}
+		r = requests.get('http://.../get_cekal/', params=data)
+		if r.status_code == 200:
+			result = r.text
+	except:
+		pass
 	
 
 @app.route("/readfingerprint")
@@ -476,7 +483,7 @@ def verification_process():
 		render_template('succeed_verification.html')	
 	else:
 		render_template('failed_verification.html')
-		
+			
 	return redirect(url_for('get_camera_data'))
 
 
@@ -491,7 +498,10 @@ def take_image():
 
 @app.route("/logging")
 def logging():
+	import os, os.path
 	import requests
+	import datetime
+	import time
 	"""
 		This method will do the logging
 	"""
@@ -514,9 +524,13 @@ def logging():
 		pass 
 	data_logging['photo_taken'] = photo_taken
 
-	result = requests.post("", data=data_logging)
-	print(result.status_code, result.reason)
+	# Get current timestamp
+	ts = time.time()
+	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+	data_logging['timestamp_traveller'] = ts
 
+	result_reason, result_status = requests.post("", data=data_logging)
+	
 	return redirect(url_for('closing_connection'))
 
 
@@ -541,7 +555,6 @@ def closing_connection():
 			print(e)
 	# Write file is_exist_card for an ajax to check it
 	write_data_to_file("is_exist_card", 'data_exist')
-
 	r = readers()
 	reader = r[0]
 	connection = reader.createConnection()
