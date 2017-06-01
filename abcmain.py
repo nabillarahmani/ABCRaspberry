@@ -22,6 +22,7 @@ env.eval(keys={
 	'DEBUG': bool,
 	'TESTING': bool
 })
+app.logger.setLevel(app.config['LOG_LEVEL'])
 
 url = './data/'
 
@@ -31,6 +32,7 @@ def index():
 	"""
 		Render the view of index page.
 	"""
+	app.logger.debug('Accessing main page of raspberry application!')
 	r = readers()
 	reader = r[0]
 	connection = reader.createConnection()
@@ -130,6 +132,7 @@ def readcard():
 	Implementation of readcard using highlevel implementation
 		
 	"""
+	app.logger.debug('Reading a smartcard!')
 	try:
 		r = readers()
 		print("Available readers:", r)
@@ -214,6 +217,8 @@ def readcard():
 			connection.disconnect()
 			print('error')
 
+
+		app.logger.debug('Reading the first segment of data!')
 		iteration = total_length_data_1 / 252
 		remainder = total_length_data_1 % 252
 		APDU_GET = [0x00, 0xB0]
@@ -267,7 +272,6 @@ def readcard():
 			i += 1
 
 		respond_mapped = {'identification_number': '', 'full_name': '', 'fingerprint' : '', 'photo' : ''}
-
 		# check if each mapped data is exist
 		# print(field_map)
 		# print(field_map[2] == "1")
@@ -280,6 +284,7 @@ def readcard():
 			for data in respond_data_1[length_full_name_start:length_full_name_end]:
 				respond_mapped['full_name'] += str(chr(data))
 
+		app.logger.debug('Reading photo from smartcard')
 		photo = ""
 		respond_data_photo = []
 		# Get data for data photo
@@ -312,7 +317,7 @@ def readcard():
 				photo += str(chr(data))
 			respond_mapped['photo'] = photo
 			
-
+		app.logger.debug('Reading data fingerprint from smartcard...')
 		fingerprint = ""
 		respond_data_fingerprint = []
 		if field_map[12] == "1":
@@ -357,7 +362,6 @@ def readcard():
 		t.write("identification_number:{}\n".format(identification_number))
 		t.write("fullname:{}".format(fullname))
 		t.close()
-		
 		return redirect(url_for('readfingerprint'))
 	except Exception as e:
 		return e
@@ -393,22 +397,35 @@ def verification_cekal(identification_number):
 	"""
 		This method will send a GET request into the API and retrieve cekal status
 	"""
+	app.logger.debug('Getting status cekal with corresponded identification number')
 	result = False
 	try:
-		data = {'identification_number':identification_number}
-		r = requests.get('http://.../get_cekal/', params=data)
+		data = {'identification_number' : identification_number}
+		r = requests.get('http://webservice-abcsystem.herokuapp.com/get_cekal/', params=data)
+		app.logger.debug('now accessing {}'.format(r.url))
 		if r.status_code == 200:
-			result = r.text
+			app.logger.debug('Succeed on getting status cekal')
+		else:
+			app.logger.debug('There is no data on this user')
+		app.logger.debug("Request result : {}".format(r.text))
+		if r.text == 'False':
+			result = False
+		else:
+			result = True
+		return result 
 	except:
-		pass
-	
+		app.logger.debug('Failed on making request')
+		return result	
+
 
 @app.route("/readfingerprint")
 def readfingerprint():
 	"""
 		This method will extract the fingerprint from the fingerprint reader
 		It will store the fingerprint extract onto session and pass it into verification_process
+		This method is not implemented yet
 	"""
+	app.logger.debug('Accessing the readfingerprint route...')
 	return redirect(url_for('verification_process'))
 
 
@@ -419,6 +436,7 @@ def verification_process():
 		This method will check the verification process between person to document
 		This method will also check to server cekal
 	"""
+	app.logger.debug('Accessing the verification process now...')
 	url = './data/'
 	# Get the fingerprint data
 	fingerprint_extract = ''
@@ -478,8 +496,8 @@ def verification_process():
 	else:
 		#show fingerprint not match!
 		render_template('failed_fingerprint_verification.html')
-	
-	if result_fingerprint and status_cekal:
+	app.logger.debug('The fingerprint verif : {} and status_cekal verif : {}'.format(result_fingerprint, status_cekal))
+	if result_fingerprint and not status_cekal:
 		render_template('succeed_verification.html')	
 	else:
 		render_template('failed_verification.html')
@@ -492,6 +510,7 @@ def take_image():
 	"""
 		This method will take the picture of the traveller
 	"""
+	app.logger.debug('Taking picture now! Say cheese!!')
  	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 512x384 -q data/traveller.jpg")
  	return 
 
@@ -505,7 +524,7 @@ def logging():
 	"""
 		This method will do the logging
 	"""
-	# TODO IMPLEMENT LOGGING INTO THE SERVER LOGGING
+	app.logger.debug('Accessing logging route')
 	data_logging = {'identification_number': '', 'full_name': '', 'photo_taken' : '', 'status_cekal' : False}
 	
 	if 'identification_number' in session:
@@ -523,15 +542,22 @@ def logging():
 		# show error
 		pass 
 	data_logging['photo_taken'] = photo_taken
-
+	print(len(photo_taken))
 	# Get current timestamp
 	ts = time.time()
 	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 	data_logging['timestamp_traveller'] = ts
-
-	result_reason, result_status = requests.post("", data=data_logging)
-	
-	return redirect(url_for('closing_connection'))
+	app.logger.debug('ready to send request this : {}'.format(data_logging))
+	try:
+		result = requests.post("http://webservice-abcsystem.herokuapp.com/logging_data", data=data_logging)
+		if result.status_code == 200:
+			app.logger.debug('SUCCEED SEND DATA LOGGING')
+		else:
+			app.logger.debug('FAILED ON LOGGING')
+		return redirect(url_for('closing_connection'))
+	except Exception as e:
+		app.logger.debug(str(e))
+		return redirect(url_for('closing_connection'))
 
 
 @app.route("/closing_connection")
@@ -569,9 +595,10 @@ def get_camera_data():
 	"""
 		This method will captured the traveller photo and store it into logging folder
 	"""	
+	app.logger.debug('accessing /get_camera_data')
 	take_image()
 	# If verification succeed
-	if session['verifikasi_fingerprint'] and session['status_cekal']:
+	if session['verifikasi_fingerprint'] and not session['status_cekal']:
 		return redirect(url_for('logging'))
 	else:
 		return redirect(url_for('open_gate'))
