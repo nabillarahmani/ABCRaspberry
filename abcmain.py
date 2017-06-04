@@ -457,6 +457,7 @@ def readfingerprint():
 @app.route("/verification_process")
 def verification_process():
 	import os.path
+	import time
 	"""
 		This method will check the verification process between person to document
 		This method will also check to server cekal
