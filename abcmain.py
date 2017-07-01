@@ -29,9 +29,11 @@ url = './data/'
 @app.route("/")
 def index():
 	import time
+	import os
 	"""
 		Render the view of index page.
 	"""
+	write_data_to_file("is_at_index", 'data_exist')
 	app.logger.debug('Accessing main page of raspberry application!')
 	r = readers()
 	reader = r[0]
@@ -39,6 +41,7 @@ def index():
 	while connection is not None:
 		try:
 			connection.connect()
+			os.remove("is_at_index")
 			return redirect(url_for('readcard'))
 		except:
 			continue	
@@ -128,11 +131,13 @@ def get_total_length_map(length_map, start, end):
 
 @app.route("/readcard")
 def readcard():
+	import os
 	"""
 	Implementation of readcard using highlevel implementation
 		
 	"""
 	app.logger.debug('Reading a smartcard!')
+	write_data_to_file("is_at_readcard", 'data_exist')
 	try:
 		r = readers()
 		print("Available readers:", r)
@@ -152,6 +157,8 @@ def readcard():
 		if sw1  == None and sw2 == None:
 			# discard connection on card
 			print("failed to render card")
+			connection.disconnect()
+			return redirect(url_for('index'))
 
 		# Select DF
 		APDU_DF = [0x00, 0xA4, 0x00, 0x00, 0x02, 0x10, 0x01]
@@ -185,14 +192,21 @@ def readcard():
 
 		if flag_empty == True:
 			connection.disconnect()
-			print("error")
-			pass
+			os.remove("is_at_readcard")
+			write_data_to_file("is_empty_card", 'data_exist')
+			time.sleep(10)
+			os.remove("is_empty_card")
+			app.logger.debug('Card is empty!')
+			return redirect(url_for('index'))
 
 		if data_card[1] != 2:
 			connection.disconnect()
-			print("errorhandler")
-			pass
-			# do eject card here
+			os.remove("is_at_readcard")
+			write_data_to_file("is_not_xirka", 'data_exist')
+			time.sleep(10)
+			os.remove("is_not_xirka")
+			app.logger.debug('Card profile is not Xirka!')
+			return redirect(url_for('index'))
 
 		# get the hex representation of respond
 		# parse the first 3 bits from the respond to check the length
@@ -215,7 +229,12 @@ def readcard():
 		if sw1 == None and sw2 == None:
 			#sdcard disconnect
 			connection.disconnect()
-			print('error')
+			os.remove("is_at_readcard")
+			write_data_to_file("is_null", 'data_exist')
+			time.sleep(10)
+			os.remove("is_null")
+			app.logger.debug('The content inside card is null')
+			return redirect(url_for('index'))
 
 
 		app.logger.debug('Reading the first segment of data!')
@@ -279,6 +298,15 @@ def readcard():
 		if field_map[2] == "1":
 			for data in respond_data_1[length_identification_number_start:length_identification_number_end]:
 				respond_mapped['identification_number'] += str(chr(data))
+		else:
+			#It means there's no identification number!
+			connection.disconnect()
+			os.remove("is_at_readcard")
+			write_data_to_file("is_empty_identification_number", 'data_exist')
+			time.sleep(5)
+			os.remove("is_empty_identification_number")
+			app.logger.debug('Card doesnt have identification number!')
+			return redirect(url_for('index'))
 		# Get data for fullname
 		if field_map[3] == "1":
 			for data in respond_data_1[length_full_name_start:length_full_name_end]:
@@ -362,9 +390,16 @@ def readcard():
 		t.write("identification_number:{}\n".format(identification_number))
 		t.write("fullname:{}".format(fullname))
 		t.close()
+		os.remove("is_at_readcard")
 		return redirect(url_for('readfingerprint'))
 	except Exception as e:
-		return e
+		app.logger.debug(str(e))
+		os.remove("is_at_readcard")
+		write_data_to_file("is_error_card", 'data_exist')
+		time.sleep(5)
+		os.remove("is_error_card")
+		return redirect(url_for('index'))
+
 
 
 def get_data_from_file(data):
@@ -431,11 +466,14 @@ def readfingerprint():
 
 @app.route("/verification_process")
 def verification_process():
+	import os
 	import os.path
+	import time
 	"""
 		This method will check the verification process between person to document
 		This method will also check to server cekal
 	"""
+	write_data_to_file("is_at_verification", 'data_exist')
 	app.logger.debug('Accessing the verification process now...')
 	url = './data/'
 	# Get the fingerprint data
@@ -496,11 +534,18 @@ def verification_process():
 	else:
 		#show fingerprint not match!
 		render_template('failed_fingerprint_verification.html')
+	
 	app.logger.debug('The fingerprint verif : {} and status_cekal verif : {}'.format(result_fingerprint, status_cekal))
 	if result_fingerprint and not status_cekal:
-		render_template('succeed_verification.html')	
+		os.remove("is_at_verification")
+		write_data_to_file("succeed_verification", 'data_exist')
+		time.sleep(5)
+		os.remove("succeed_verification")	
 	else:
-		render_template('failed_verification.html')
+		os.remove("is_at_verification")
+		write_data_to_file("failed_verification", 'data_exist')
+		time.sleep(5)
+		os.remove("failed_verification")
 			
 	return redirect(url_for('get_camera_data'))
 
@@ -582,18 +627,21 @@ def closing_connection():
 	reader = r[0]
 	connection = reader.createConnection()
 	connection.disconnect()
-	time.sleep(10) # delays for 5 seconds
+	time.sleep(10) # delays for 10 seconds
 	os.remove('is_exist_card')
 	return redirect(url_for('index'))
 
 
 @app.route("/get_camera_data")
 def get_camera_data():
+	import os, os.path
 	"""
 		This method will captured the traveller photo and store it into logging folder
 	"""	
+	write_data_to_file("is_at_camera", "data_exist")
 	app.logger.debug('accessing /get_camera_data')
 	take_image()
+	os.remove("is_at_camera")
 	# If verification succeed
 	if session['verifikasi_fingerprint'] and not session['status_cekal']:
 		return redirect(url_for('open_gate'))		

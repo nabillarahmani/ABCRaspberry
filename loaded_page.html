@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title></title>
+	<meta name="author" content="NRZ" />
+	<meta name="description" content="" />
+	<meta name="keywords"  content=""/>
+	<meta name="Resource-type" content="Document"/>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
+
+	<!-- CSS -->
+	<link href="{{ url_for('static', filename='css/jquery.fullPage.css') }}" rel="stylesheet">
+	<!--
+	<link rel="stylesheet" type="text/css" href="assets/cs/jquery.style.css"/>
+	-->
+</head>
+<body>
+	<h1> WELCOME TO Immigration Automated Border Control Gate </h1>
+	<div id="content"></div>
+</body>
+<!-- JS -->	
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.2.1.js') }}"></script>
+<script>
+
+var myVar = setInterval(fileChecker, 1000);
+
+function fileChecker()
+{
+	if(at_index()){
+		var result = "";
+		result += "<h1> Welcome To Immigration Automated Border Control Gate </h1>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_readcard())
+	{
+		var result = "";
+		result += "<h1> Now Reading Your Card </h1>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_empty_card())
+	{
+		var result = "";
+		result += "<h1> Your card is empty!</h1><br>";
+		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_not_xirca())
+	{
+		var result = "";
+		result += "<h1> Your profile card is not Xirca!</h1><br>";
+		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_null_card())
+	{
+		var result = "";
+		result += "<h1> Your card is empty!</h1><br>";
+		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_identification_number())
+	{
+		var result = "";
+		result += "<h1> Your identification_number cannot be read!</h1><br>";
+		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_error_card())
+	{
+		//
+		var result = "";
+		result += "<h1> There is an error within reading processing!</h1><br>";
+		result += "<h2> Please unplug your card and try again!</h2><br>";
+		result += "<h2> If same error occur, please consult to the nearest guard!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_verification_process())
+	{
+		var result = "";
+		result += "<h1> Your document is being processed!</h1><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_verification_success())
+	{
+		var result = "";
+		result += "<h1> Your verification is succeed!</h1><br>";
+		result += "<h2> Dont forget to take your card!</h2><br>";
+		document.getElementById("content").innerHTML = result;
+	}
+	if(at_verification_failed())
+	{
+		var result = "";
+		result += "<h1> Your verification is failed!</h1><br>";
+		document.getElementById("content").innerHTML = result;	
+	}
+	if(at_camera())
+	{
+		var result = "";
+		result += "<h1> Please wait while we take a picture of you!</h1><br>";
+		document.getElementById("content").innerHTML = result;	
+	}
+	if(at_closing_connection())
+	{
+		var result = "";
+		result += "<h1> Please pass the gate and dont forget to take your card!</h1><br>";
+		document.getElementById("content").innerHTML = result;	
+	}
+
+}
+
+
+function at_index()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_at_index";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_readcard()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_at_readcard";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_empty_card()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_empty_card";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_not_xirca()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_not_xirca";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_null_card()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_null";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_identification_number()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_empty_identification_number";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_error_card()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_error_card";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_verification_process()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_at_verification";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_verification_success()
+{
+    var http = new XMLHttpRequest();
+    var url = "succeed_verification";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_verification_failed()
+{
+    var http = new XMLHttpRequest();
+    var url = "failed_verification";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_camera()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_at_camera";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_closing_connection()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_exist_card";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+</script>
+</html>
