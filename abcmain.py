@@ -558,9 +558,9 @@ def take_image():
 		This method will take the picture of the traveller
 	"""
 	ts = time.time()
-	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H:%M:%S')
+	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
 	app.logger.debug('Taking picture now! Say cheese!!')
- 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 100x100 --no-banner -q ./data_logging/"+ts+".jpeg")
+ 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 100x100 --no-banner -q ./data_logging/"+ts+"_"+session['identification_number']+".jpeg")
  	return 
 
 
