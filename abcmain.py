@@ -666,6 +666,7 @@ def open_gate():
 	GPIO.output(pin,  GPIO.HIGH)
 	time.sleep(5)
 	GPIO.output(pin, GPIO.LOW)
+	time.sleep(5)
 	#cleaning all GPIO's 
 	GPIO.cleanup()
 	return redirect(url_for('logging'))
