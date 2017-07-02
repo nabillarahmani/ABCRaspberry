@@ -664,11 +664,11 @@ def open_gate():
 	#setting the mode for all pins so all will be switched on 
 	GPIO.setup(pin, GPIO.OUT)
 	GPIO.output(pin,  GPIO.HIGH)
-	time.sleep(1)
+	time.sleep(5)
 	GPIO.output(pin, GPIO.LOW)
 	#cleaning all GPIO's 
 	GPIO.cleanup()
-	return redirect_url(url_for('logging'))
+	return redirect(url_for('logging'))
 
 
 @app.errorhandler(404)
