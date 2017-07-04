@@ -18,26 +18,27 @@
 	-->
 </head>
 <body>
-	<h1> WELCOME TO Immigration Automated Border Control Gate </h1>
+	<h1> Automated Border Control Gate Immigration</h1>
 	<div id="content"></div>
+	<div id="content_img"></div>
 </body>
 <!-- JS -->	
 <script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.2.1.js') }}"></script>
 <script>
 
 var myVar = setInterval(fileChecker, 1000);
-
 function fileChecker()
 {
 	if(at_index()){
 		var result = "";
-		result += "<h1> Welcome To Immigration Automated Border Control Gate </h1>";
+		result += "<h1> Welcome! Please insert your card! </h1>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_readcard())
 	{
 		var result = "";
-		result += "<h1> Now Reading Your Card </h1>";
+		result += "<h1> Now Reading Your Card </h1><br>";
+		result += "<h2> Please dont unplug your card from the reader </h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_empty_card())
@@ -79,8 +80,16 @@ function fileChecker()
 	}
 	if(at_verification_process())
 	{
+		if(at_delete_content())
+		{
+			var list=document.getElementById("content_img");
+			list.parentNode.removeChild(list);	
+			var div = document.createElement('div');
+			div.id = "content_img";
+			document.body.appendChild(div);
+		}
 		var result = "";
-		result += "<h1> Your document is being processed!</h1><br>";
+		result += "<h1> Your document is being processed! Please wait until the verification is finished</h1><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_success())
@@ -105,8 +114,23 @@ function fileChecker()
 	if(at_closing_connection())
 	{
 		var result = "";
-		result += "<h1> Please pass the gate and dont forget to take your card!</h1><br>";
+		result += "<h1> Thank you!</h1><br>";
 		document.getElementById("content").innerHTML = result;	
+	}
+	if(at_open_gate())
+	{
+		var result = "";
+		result += "<h1> Please pass the gate and dont forget to take the card!</h1><br>";
+		document.getElementById("content").innerHTML = result;	
+	}
+	if(at_identity_person())
+	{	
+		if(at_identity_person_flag())
+		{
+			get_identity();
+			show_image("data/photo_taken.jpeg", 500, 500, "photo");
+		}
+			
 	}
 
 }
@@ -229,6 +253,85 @@ function at_closing_connection()
     http.open('HEAD', url, false);
     http.send();
     return http.status!=404;
+}
+
+
+function at_open_gate()
+{
+    var http = new XMLHttpRequest();
+    var url = "is_at_open_gate";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;
+}
+
+
+function at_identity_person()
+{
+	var http = new XMLHttpRequest();
+    var url = "succeed_read";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;	
+}
+
+
+function at_identity_person_flag()
+{
+	var http = new XMLHttpRequest();
+    var url = "succeed_read_flag";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;	
+}
+
+function check_identity()
+{
+	var http = new XMLHttpRequest();
+    var url = "data/information_taken.txt";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;	
+}
+
+
+function at_delete_content()
+{
+	var http = new XMLHttpRequest();
+    var url = "delete_content";
+    http.open('HEAD', url, false);
+    http.send();
+    return http.status!=404;	
+}
+
+
+function show_image(src, width, height, alt) {
+    var img = document.createElement("img");
+    img.src = src;
+    img.width = width;
+    img.height = height;
+    img.alt = alt;
+ 	// document.getElementById('content').appendChild(img);
+ 	document.getElementById("content_img").appendChild(img);
+}
+
+
+function get_identity() 
+{
+	var http = new XMLHttpRequest();
+	var url = "data/information_taken.txt";
+	http.open("GET", url, true);
+	var result = "";
+	//Send the proper header information along with the request
+	http.onreadystatechange = function() {//Call a function when the state changes.
+	  if(http.readyState == 4 && http.status == 200) {
+	      	var allText = this.responseText;
+        	result += "<h1> Welcome!</h1><br>";
+			result += allText + " <br>";	
+			document.getElementById("content").innerHTML = result;	
+	  }
+	}
+	http.send(null);
 }
 
 </script>

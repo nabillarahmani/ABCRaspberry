@@ -378,19 +378,27 @@ def readcard():
 			respond_mapped['fingerprint'] = fingerprint
 
 		if photo is not '':
-			write_data_to_file(url+'photo_taken', photo)	
+			write_data_to_file(url+'photo_taken.jpeg', photo)	
 
 		if fingerprint is not '':
-			write_data_to_file(url+'/fingerprint_taken', fingerprint)
+			write_data_to_file(url+'/fingerprint_taken.jpeg', fingerprint)
 
 		# Write the data so that it would be sufficient to access it later!
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
+		os.remove("is_at_readcard")
+		
 		t = open(url+'information_taken.txt', "w+")
 		t.write("identification_number:{}\n".format(identification_number))
 		t.write("fullname:{}".format(fullname))
 		t.close()
 		os.remove("is_at_readcard")
+		write_data_to_file("succeed_read", 'data_exist')
+		write_data_to_file("succeed_read_flag", 'data_exist')
+		time.sleep(1)
+		os.remove("succeed_read_flag")
+		time.sleep(5)
+		os.remove("succeed_read")
 		return redirect(url_for('readfingerprint'))
 	except Exception as e:
 		app.logger.debug(str(e))
@@ -474,6 +482,9 @@ def verification_process():
 		This method will also check to server cekal
 	"""
 	write_data_to_file("is_at_verification", 'data_exist')
+	write_data_to_file("delete_content", 'data_exist')
+	time.sleep(1)
+	os.remove("delete_content")
 	app.logger.debug('Accessing the verification process now...')
 	url = './data/'
 	# Get the fingerprint data
@@ -652,9 +663,11 @@ def get_camera_data():
 @app.route("/open_gate")
 def open_gate():
 	import RPi.GPIO as GPIO
+	import os, os.path
 	"""
 		This method will switch the gate, so that the traveller can pass the gate
 	"""
+	write_data_to_file("is_at_open_gate", "data_exist")
 	# setting a current mode
 	GPIO.setmode(GPIO.BCM)
 	#removing the warings 
@@ -669,6 +682,7 @@ def open_gate():
 	time.sleep(5)
 	#cleaning all GPIO's 
 	GPIO.cleanup()
+	os.remove("is_at_open_gate")
 	return redirect(url_for('logging'))
 
 
