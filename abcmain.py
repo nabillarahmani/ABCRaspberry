@@ -386,7 +386,6 @@ def readcard():
 		# Write the data so that it would be sufficient to access it later!
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
-		os.remove("is_at_readcard")
 		
 		t = open(url+'information_taken.txt', "w+")
 		t.write("identification_number:{}\n".format(identification_number))
