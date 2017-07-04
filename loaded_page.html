@@ -18,10 +18,15 @@
 	<link rel="stylesheet" type="text/css" href="assets/cs/jquery.style.css"/>
 	-->
 </head>
-<body>
-	<h1 style="font-family: 'Oswald', sans-serif;"> <center> Automated Border Control Gate Immigration </center></h1>
-	<div id="content"></div>
-	<div id="content_img"></div>
+<body style="width: 100vw; height: 100vh; margin: 0; padding: 0;">
+	<div class="container" style="display: table; width: 100%; height: 100%;">
+		<div class="container" style="display: table-cell; vertical-align: middle; background: #f8f8f8; padding: 3em; border: 3em solid #fff;">
+			<h1 style="margin: 0; font-family: 'Oswald', sans-serif;"> <center> Automated Border Control Gate Immigration </center></h1>
+			<div style="width: 3em; margin: 3em auto; border-bottom: 3px solid #ccc;"></div>
+			<div id="content"></div>
+			<div id="content_img"></div>
+		</div>
+	</div>
 </body>
 <!-- JS -->	
 <script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.2.1.js') }}"></script>
@@ -30,43 +35,48 @@
 var myVar = setInterval(fileChecker, 1000);
 function fileChecker()
 {
-	if(at_index()){
+	if(at_index())
+	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Welcome! Please insert your card!  </center></h1> <br /> <hr />";
+		result += "<center>";
+		result += "<center><h1 style=\"width: 50%; margin: 0; padding: 1em 0; font-family: 'Oswald', sans-serif;\">Welcome! Please insert your card!</h1></center>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_readcard())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Now Reading Your Card  </center></h1><br/> <hr/>";
-		result += "<h3> Please dont unplug your card from the reader </h3><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Now Reading Your Card...</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Please do not unplug your card from the reader before reading is finished.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_empty_card())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your card is empty! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your card is empty! </center></h1><br/>";
 		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_not_xirca())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your profile card is not Xirca! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your profile card is not Xirca! </center></h1><br/>";
 		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_null_card())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your card is empty! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your card is empty! </center></h1><br/>";
 		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_identification_number())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your identification_number cannot be read! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your identification_number cannot be read! </center></h1><br/>";
 		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
@@ -74,7 +84,7 @@ function fileChecker()
 	{
 		//
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> There is an error within reading processing! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> There is an error within reading processing! </center></h1><br/>";
 		result += "<h2> Please unplug your card and try again!</h2><br>";
 		result += "<h2> If same error occur, please consult to the nearest guard!</h2><br>";
 		document.getElementById("content").innerHTML = result;
@@ -90,38 +100,38 @@ function fileChecker()
 			document.body.appendChild(div);
 		}
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your document is being processed! Please wait until the verification is finished </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your document is being processed! Please wait until the verification is finished </center></h1><br/>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_success())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your verification is succeed! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your verification is succeed! </center></h1><br/>";
 		result += "<h2> Dont forget to take your card!</h2><br>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_failed())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your verification is failed! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Your verification is failed! </center></h1><br/>";
 		document.getElementById("content").innerHTML = result;	
 	}
 	if(at_camera())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Please wait while we take a picture of you! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Please wait while we take a picture of you! </center></h1><br/>";
 		document.getElementById("content").innerHTML = result;	
 	}
 	if(at_closing_connection())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Thank you! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Thank you! </center></h1><br/>";
 		document.getElementById("content").innerHTML = result;	
 	}
 	if(at_open_gate())
 	{
 		var result = "";
-		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Please pass the gate and dont forget to take the card! </center></h1><br>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Please pass the gate and dont forget to take the card! </center></h1><br/>";
 		document.getElementById("content").innerHTML = result;	
 	}
 	if(at_identity_person())
@@ -327,7 +337,7 @@ function get_identity()
 	http.onreadystatechange = function() {//Call a function when the state changes.
 	  if(http.readyState == 4 && http.status == 200) {
 	      	var allText = this.responseText;
-        	result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Welcome! </center></h1><br>";
+        	result += "<h1 style=\"font-family: 'Oswald', sans-serif;\"> <center> Welcome! </center></h1><br/>";
 			result += allText + " <br>";	
 			document.getElementById("content").innerHTML = result;	
 	  }
