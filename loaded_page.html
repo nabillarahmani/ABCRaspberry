@@ -12,15 +12,21 @@
 	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
 
 	<!-- CSS -->
-	<link href="{{ url_for('static', filename='css/jquery.fullPage.css') }}" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+	<!-- <link href="{{ url_for('static', filename='css/jquery.fullPage.css') }}" rel="stylesheet"> -->
 	<!--
 	<link rel="stylesheet" type="text/css" href="assets/cs/jquery.style.css"/>
 	-->
 </head>
-<body>
-	<h1> Automated Border Control Gate Immigration</h1>
-	<div id="content"></div>
-	<div id="content_img"></div>
+<body style="width: 100vw; height: 100vh; margin: 0; padding: 0;">
+	<div class="container" style="display: table; width: 100%; height: 100%;">
+		<div class="container" style="display: table-cell; vertical-align: middle; background: #f4f4f4; padding: 3em; border: 3em solid #fff;">
+			<h1 style="margin: 0; font-family: 'Oswald', sans-serif; text-transform: uppercase;"> <center> Automated Border Control Gate Immigration </center></h1>
+			<div style="width: 3em; margin: 3em auto; border-bottom: 3px solid #ccc;"></div>
+			<div id="content"></div>
+			<div id="content_img"></div>
+		</div>
+	</div>
 </body>
 <!-- JS -->	
 <script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.2.1.js') }}"></script>
@@ -29,53 +35,67 @@
 var myVar = setInterval(fileChecker, 1000);
 function fileChecker()
 {
-	if(at_index()){
+	if(at_index())
+	{
 		var result = "";
-		result += "<h1> Welcome! Please insert your card! </h1>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Welcome! Please insert your card!</h1>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_readcard())
 	{
 		var result = "";
-		result += "<h1> Now Reading Your Card </h1><br>";
-		result += "<h2> Please dont unplug your card from the reader </h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Now Reading Your Card...</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Please do not remove your card from the reader before reading is finished.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_empty_card())
 	{
 		var result = "";
-		result += "<h1> Your card is empty!</h1><br>";
-		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your card is empty!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Please remove your card and consult to the nearest guard.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_not_xirca())
 	{
 		var result = "";
-		result += "<h1> Your profile card is not Xirca!</h1><br>";
-		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your profile card is not Xirca!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\"> Please remove your card and consult to the nearest guard.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_null_card())
 	{
 		var result = "";
-		result += "<h1> Your card is empty!</h1><br>";
-		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your card is empty!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\"> Please remove your card and consult to the nearest guard.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_identification_number())
 	{
 		var result = "";
-		result += "<h1> Your identification_number cannot be read!</h1><br>";
-		result += "<h2> Please unplug your card and consult to the nearest guard!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your identification number cannot be read!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Please remove your card and consult to the nearest guard.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_error_card())
 	{
-		//
 		var result = "";
-		result += "<h1> There is an error within reading processing!</h1><br>";
-		result += "<h2> Please unplug your card and try again!</h2><br>";
-		result += "<h2> If same error occur, please consult to the nearest guard!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">There is an error within reading processing!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Please remove your card and try again!</p>";
+		result += "<p style=\"font-size: 1.5rem;\">If the same error occurs, please consult to the nearest guard.</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_process())
@@ -89,52 +109,61 @@ function fileChecker()
 			document.body.appendChild(div);
 		}
 		var result = "";
-		result += "<h1> Your document is being processed! Please wait until the verification is finished</h1><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your document is being processed... Please wait until the verification is finished.</h1>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_success())
 	{
 		var result = "";
-		result += "<h1> Your verification is succeed!</h1><br>";
-		result += "<h2> Dont forget to take your card!</h2><br>";
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your verification is succeed!</h1>";
+		result += "<p style=\"font-size: 1.5rem;\">Dont forget to take your card!</p>";
+		result += "</center>";
 		document.getElementById("content").innerHTML = result;
 	}
 	if(at_verification_failed())
 	{
 		var result = "";
-		result += "<h1> Your verification is failed!</h1><br>";
-		document.getElementById("content").innerHTML = result;	
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Your verification is failed!</h1>";
+		result += "</center>";
+		document.getElementById("content").innerHTML = result;
 	}
 	if(at_camera())
 	{
 		var result = "";
-		result += "<h1> Please wait while we take a picture of you!</h1><br>";
-		document.getElementById("content").innerHTML = result;	
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Please wait while we take a picture of you!</h1>";
+		result += "</center>";
+		document.getElementById("content").innerHTML = result;
 	}
 	if(at_closing_connection())
 	{
 		var result = "";
-		result += "<h1> Thank you!</h1><br>";
-		document.getElementById("content").innerHTML = result;	
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Thank you!</h1>";
+		result += "</center>";
+		document.getElementById("content").innerHTML = result;
 	}
 	if(at_open_gate())
 	{
 		var result = "";
-		result += "<h1> Please pass the gate and dont forget to take the card!</h1><br>";
-		document.getElementById("content").innerHTML = result;	
+		result += "<center>";
+		result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Please pass the gate and dont forget to take the card!</h1>";
+		result += "</center>";
+		document.getElementById("content").innerHTML = result;
 	}
 	if(at_identity_person())
-	{	
+	{
 		if(at_identity_person_flag())
 		{
 			get_identity();
 			show_image("data/photo_taken.jpeg", 500, 500, "photo");
 		}
-			
 	}
-
 }
-
 
 function at_index()
 {
@@ -326,8 +355,10 @@ function get_identity()
 	http.onreadystatechange = function() {//Call a function when the state changes.
 	  if(http.readyState == 4 && http.status == 200) {
 	      	var allText = this.responseText;
-        	result += "<h1> Welcome!</h1><br>";
-			result += allText + " <br>";	
+	      	result += "<center>";
+        	result += "<h1 style=\"font-family: 'Oswald', sans-serif;\">Welcome!</h1>";
+			result += allText;
+	      	result += "</center>";
 			document.getElementById("content").innerHTML = result;	
 	  }
 	}
