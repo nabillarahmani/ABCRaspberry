@@ -386,12 +386,12 @@ def readcard():
 		# Write the data so that it would be sufficient to access it later!
 		fullname = respond_mapped['full_name']
 		identification_number = respond_mapped['identification_number']
-		os.remove("is_at_readcard")
-		
+
 		t = open(url+'information_taken.txt', "w+")
 		t.write("identification_number:{}\n".format(identification_number))
 		t.write("fullname:{}".format(fullname))
 		t.close()
+
 		os.remove("is_at_readcard")
 		write_data_to_file("succeed_read", 'data_exist')
 		write_data_to_file("succeed_read_flag", 'data_exist')
@@ -569,7 +569,7 @@ def take_image():
 		This method will take the picture of the traveller
 	"""
 	ts = time.time()
-	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H:%M:%S')
 	app.logger.debug('Taking picture now! Say cheese!!')
  	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 100x100 --no-banner -q ./data_logging/"+ts+"_"+session['identification_number']+".jpeg")
  	return 
