@@ -595,6 +595,8 @@ def logging():
 		data_logging['status_verification_cekal'] = session['status_cekal']
 	if 'verifikasi_fingerprint' in session:
 		data_logging['status_verification_fingerprint'] = session['verifikasi_fingerprint']
+	if 'photo_taken' in session:
+		data_logging['photo_taken'] = session['photo_taken']
 	# Get current timestamp
 	ts = time.time()
 	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -674,12 +676,31 @@ def open_gate():
 	GPIO.setwarnings(False)
 	#creating a list (array) with the number of GPIO's that we use 
 	pin = 18 
+	pin_sensor = 23
 	#setting the mode for all pins so all will be switched on 
 	GPIO.setup(pin, GPIO.OUT)
+	GPIO.setup(pin_sensor, GPIO.IN)
+	#Set initial pulse
+	pulse = 0
+	value = 1
+	# Trigger the gate to on
 	GPIO.output(pin,  GPIO.HIGH)
-	time.sleep(5)
+	# Check whether the person has passed the gate
+	while value:
+		# check until the value is zero
+		value = GPIO.input(pin_sensor)
+		pulse += 1
+		# If has reach 10k 
+		if pulse == 10000:
+			break
+	# Close the gate
 	GPIO.output(pin, GPIO.LOW)
-	time.sleep(5)
+	time.sleep(3)
+	# Set the value of session of photo_taken (this value is unused)
+	if value:
+		session['photo_taken'] = 'not passed'
+	else:
+		session['photo_taken'] = 'passed'
 	#cleaning all GPIO's 
 	GPIO.cleanup()
 	os.remove("is_at_open_gate")
