@@ -207,10 +207,8 @@ def readcard():
 		# parse the first 3 bits from the respond to check the length
 		# Field map = 10101010100011 (in binary) contains 3 bytes of binary representation
 		# print "data : {}\n".format(data)
-		respond_field_map 	= get_array_hex(data)
-
-		field_map 			= parse_field_map(get_hex_string(respond_field_map, 0, 6))
-
+		respond_field_map = get_array_hex(data)
+		field_map = parse_field_map(get_hex_string(respond_field_map, 0, 6))
 		# Get the total length map of data 1
 		length_map = data[3:]
 		total_length_data_1 = get_total_length_map(length_map, 0, 18)
