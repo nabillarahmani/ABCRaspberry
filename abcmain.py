@@ -562,7 +562,8 @@ def take_image():
 	ts = time.time()
 	ts = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H:%M:%S')
 	app.logger.debug('Taking picture now! Say cheese!!')
- 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r 100x100 --no-banner -q ./data_logging/"+ts+"_"+session['identification_number']+".jpeg")
+ 	os.system("sudo fswebcam --fps 15 -S 20 -s brightness=80% -r ''\
+ 		100x100 --no-banner -q ./data_logging/"+ts+"_"+session['identification_number']+".jpeg")
  	return 
 
 
