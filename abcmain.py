@@ -173,32 +173,6 @@ def readcard():
 		# GET CARD TYPE
 		data_card, sw1, sw2 = get_apdu_command(connection, APDU_GET, 0, 0, 2)
 
-
-		# SELECT EF (FIELD MAP + LENGTH MAP)
-		APDU_FIELD 		= [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x00]
-		data, sw1, sw2 	= select_apdu_command(connection, APDU_FIELD)
-
-		#Get field map + length map
-		APDU_GET = [0x00, 0xB0]
-		data, sw1, sw2 	= get_apdu_command(connection, APDU_GET, 0, 0, 51)
-
-		flag_empty 		= True		
-		
-		# Check for each element whether it is filled yet or not
-		for element in data:
-			# IF there is one single element which not FF, then it is filled
-			if element != '255':
-				flag_empty = False
-
-		if flag_empty == True:
-			connection.disconnect()
-			os.remove("is_at_readcard")
-			write_data_to_file("is_empty_card", 'data_exist')
-			time.sleep(10)
-			os.remove("is_empty_card")
-			app.logger.debug('Card is empty!')
-			return redirect(url_for('index'))
-
 		if data_card[1] != 2:
 			connection.disconnect()
 			os.remove("is_at_readcard")
@@ -206,6 +180,27 @@ def readcard():
 			time.sleep(10)
 			os.remove("is_not_xirka")
 			app.logger.debug('Card profile is not Xirka!')
+			return redirect(url_for('index'))
+
+		# SELECT EF (FIELD MAP + LENGTH MAP)
+		APDU_FIELD 		= [0x00, 0xA4, 0x00, 0x00, 0x02, 0x01, 0x00]
+		data, sw1, sw2 	= select_apdu_command(connection, APDU_FIELD)
+		#Get field map + length map
+		APDU_GET = [0x00, 0xB0]
+		data, sw1, sw2 	= get_apdu_command(connection, APDU_GET, 0, 0, 51)
+		flag_empty 		= True		
+		# Check for each element whether it is filled yet or not
+		for element in data:
+			# IF there is one single element which not FF, then it is filled
+			if element != '255':
+				flag_empty = False
+		if flag_empty == True:
+			connection.disconnect()
+			os.remove("is_at_readcard")
+			write_data_to_file("is_empty_card", 'data_exist')
+			time.sleep(10)
+			os.remove("is_empty_card")
+			app.logger.debug('Card is empty!')
 			return redirect(url_for('index'))
 
 		# get the hex representation of respond
@@ -218,7 +213,6 @@ def readcard():
 
 		# Get the total length map of data 1
 		length_map = data[3:]
-
 		total_length_data_1 = get_total_length_map(length_map, 0, 18)
 
 		# SELECT EF FOR FIRST DATA 
@@ -235,7 +229,6 @@ def readcard():
 			os.remove("is_null")
 			app.logger.debug('The content inside card is null')
 			return redirect(url_for('index'))
-
 
 		app.logger.debug('Reading the first segment of data!')
 		iteration = total_length_data_1 / 252
